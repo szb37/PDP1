@@ -2,6 +2,7 @@ library(lmerTest)
 library(tidyr)
 library(tibble)
 library(dplyr)
+library(performance)
 
 setwd('C://Users//szb37//My Drive//Projects//PDP1//codebase//')
 source('C://Users//szb37//My Drive//Projects//PDP1//codebase//data//load_pdp1.r')
@@ -19,6 +20,11 @@ for (this_measure in unique(df$measure)) {
   
   #this_measure='PALFAMS'
   model <- lmer('result~(1|pID)+tp', subset(df, measure==this_measure))
+  
+  print(this_measure)
+  print(check_normality(model))
+  print(check_heteroscedasticity(model))
+  
   coeffs <- rownames_to_column(data.frame(coef(summary(model))), var = 'tp')
   coeffs$measure <- this_measure
   res <- rbind(res, coeffs)
@@ -37,8 +43,8 @@ res <- res %>%
     ifelse(p<=0.001, '***',
     ifelse(p<=0.01, '**',
     ifelse(p<=0.05, '*', ''))))
-res$p <- round(res$p,5)
+res$p <- round(res$p,3)
 
 res <- res[, c("measure", "tp", "est", "SE", "df", "t.value", "p", "sig")]  
 export_dir <- 'C://Users//szb37//My Drive//Projects//PDP1//codebase//export results//'
-write.csv(res, file=paste(export_dir,'pdp1_mixed_models_v1.csv', sep=''), row.names=FALSE)
+write.csv(res, file=paste(export_dir,'tmp_pdp1_mixed_models_v1.csv', sep=''), row.names=FALSE)
