@@ -30,8 +30,20 @@ class Controllers():
                 row_idx = df_demo[df_demo['pID']==pID].index[0]
                 bsl_val = df_demo.iloc[row_idx, col_idx]
                 df_master.loc[(df_master.pID==pID), bsl_var] = bsl_val
-                #df_master.loc[df_master['pID']=='pID', bsl_var] = bsl_val
 
+        ### Remove MTSCTAPC measure as all values=100
+        df_master = df_master[df_master['measure']!='MTSCTAPC']
+
+        ### Remove extreme values in consensus w Ellen
+        row_idx_todelete = [idx for idx in df_master[
+            (df_master['pID']==1051) & (df_master['measure']=='RTISMDMT')].index]
+        df_master = df_master.drop(row_idx_todelete)
+
+        row_idx_todelete = [idx for idx in df_master[
+            (df_master['pID']==1051) & (df_master['measure']=='RTISMDRT')].index]
+        df_master = df_master.drop(row_idx_todelete)
+
+        ### Save results
         Helpers.save_data(save, df_master, path=os.path.join(folders.data, 'pdp1_master_v1.csv'))
         return df_master
 
@@ -81,11 +93,13 @@ class Core():
             value_name='score',
             ignore_index=True)
 
-        df = df.rename(columns={
-            'cssrs_total': 'cssrs',
-            'esaps_total': 'esaps',
-            'madrs_total': 'madrs',
-            'hama_total': 'hama'})
+        df = df.replace({
+            'cssrs_total': 'CSSRS',
+            'esaps_total': 'ESAPS',
+            'madrs_total': 'MADRS',
+            'hama_total': 'HAMA'})
+
+        df['test'] = df['measure']
 
         df = Helpers.clean_source_data(df)
         Helpers.save_data(save, df, path=os.path.join(folders.data, 'pdp1_clinical_v1.csv'))
@@ -111,6 +125,8 @@ class Core():
         df['pID'] = df['pID'].astype(int)
         df = df.loc[(df.pID.isin(config.valid_pIDs))]
 
+        df = df.replace({'Screen': 'bsl', 'A/B30': 'B30'})
+
         key_measures=[
           'PALFAMS','PALTEA', # Memory
           'RTIFMDMT','RTIFMDRT','RTISMDMT', 'RTISMDRT', # Attention & Psychomotor Speed; NO NORM
@@ -120,7 +136,7 @@ class Core():
         ]
         df = df.loc[(df.measure.isin(key_measures))]
 
-        df = df.replace({'Screen': 'bsl', 'A/B30': 'B30'})
+        df['test'] = df.apply(Helpers.get_test, axis=1)
 
         df = Helpers.clean_source_data(df)
         Helpers.save_data(save, df, path=os.path.join(folders.data, 'pdp1_cantab_v1.csv'))
@@ -148,9 +164,9 @@ class Core():
 
         df['score'] = df[['countReversals_test1', 'countReversals_test2', 'countReversals_test3']].sum(axis=1)
         df = df.rename(columns={'subjectid': 'pID','visit': 'tp',})
-        df['measure'] = 'plr'
+        df['measure'] = 'PLR'
+        df['test'] = 'PLR'
         df = df.loc[(df.abort==0)]
-        df = df[['pID', 'tp','measure', 'score']]
         df['tp'] = df['tp'].replace('Screening', 'bsl', regex=True)
 
         # Clean up and save
@@ -189,8 +205,22 @@ class Core():
 
 
 class Helpers():
-    """
-    """
+
+    @staticmethod
+    def get_test(row):
+
+        if row['measure'] in ['PALFAMS','PALTEA']:
+            return 'PAL'
+        elif row['measure'] in ['RTIFMDMT','RTIFMDRT','RTISMDMT', 'RTISMDRT']:
+            return 'RTI'
+        elif row['measure'] in ['MTSCFAPC','MTSCTAPC','MTSPS82','MTSRCAMD','MTSRFAMD']:
+            return 'MTS'
+        elif row['measure'] in [ 'OTSMDLFC', 'OTSPSFC']:
+            return 'OTS'
+        elif row['measure'] in [ 'SWMBE12','SWMBE4','SWMBE468','SWMBE6','SWMBE8','SWMS']:
+            return 'SWM'
+        else:
+            assert False
 
     @staticmethod
     def get_age(row):
@@ -199,7 +229,7 @@ class Helpers():
     @staticmethod
     def clean_source_data(df):
 
-        df = df[['pID', 'tp', 'measure', 'score']]
+        df = df[['pID', 'tp', 'test', 'measure', 'score']]
         df = df.loc[(df.pID.isin(config.valid_pIDs))]
         df.drop_duplicates(inplace=True)
         df.dropna(inplace=True)
