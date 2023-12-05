@@ -1,7 +1,7 @@
 library(here)
 
 load_pdp1 <- function(){
-  filepath = paste(here(),'/data/pdp1_master_v1.csv', sep ='')
+  filepath = paste(here(),'/data/pdp1_MASTER_v1.csv', sep ='')
   df <- read.csv(filepath, header=TRUE, sep = ",", stringsAsFactors=FALSE)
   
   df$gender <- as.factor(df$gender)

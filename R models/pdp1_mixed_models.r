@@ -28,8 +28,13 @@ df_stats$Std..Error <- NULL
 df_stats$p.value <- df_stats$Pr...t..
 df_stats$Pr...t.. <- NULL
 df_stats$df <- round(df_stats$df, 1)
+df_stats$t.value <- round(df_stats$t.value, 2)
 
-### Add Bonferoni adjusted p-values for congitive tests
+### Add Bonferoni adjusted p-values for cognitive tests
+#   For tests wo multiple outcomes adj-p-values should be same as unadjusted
+#   Adjustment should be ignored for UPDRS as here different test components
+#   are used as indep measures in the literature
+
 for (task in unique(df_data$test)){
   for (tp in unique(df_stats$tp)){
         
@@ -80,6 +85,9 @@ df_stats$tp <- sub('tpB1',  'tp(B1)', df_stats$tp)
 df_stats$tp <- sub('tpB7',  'tp(B7)', df_stats$tp)
 df_stats$tp <- sub('tpB30', 'tp(B30)', df_stats$tp)
 df_stats$tp <- sub('tpB90', 'tp(B90)', df_stats$tp)
+
+
+
 
 df_stats <- df_stats[, c("measure", "tp", "est", "SE", "df", "t.value", "p.value", "sig", "adj.p.value", "adj.sig")]  
 export_dir <- paste(here(),'/exports',sep='')

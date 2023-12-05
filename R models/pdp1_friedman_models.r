@@ -19,35 +19,40 @@ colnames(df_pw) <- column_names
 
 ### Do Friedman models
 for (this_measure in unique(df$measure)) {
+  print(this_measure)
   
   tmp <- subset(df, measure==this_measure)
-
-  ### Set tp factor levels; remove incomplete pIDs
-  if (this_measure=='CSSRS') {
-    tmp$tp <- factor(tmp$tp, levels=c('bsl', 'A1', 'A7', 'B1', 'B7', 'B30'))
-    tmp <- tmp[tmp$pID!=1129,] 
-  }
-  else if (this_measure=='ESAPS') {
-    next
-  }
+  tmp$tp <- factor(tmp$tp, levels=c('bsl', 'A7', 'B7', 'B30'))
+  
+  # Delete incomplete pIDs if needed
+  if (this_measure %in% c('RTISMDMT', 'RTISMDRT')){
+    tmp <- tmp[tmp$pID!=1051,] 
+    }
   else if (this_measure=='PLR') {
-    tmp$tp <- factor(tmp$tp, levels=c('bsl', 'A7', 'B7', 'B30'))
-    tmp <- tmp[tmp$pID!=1129,] 
+    tmp <- tmp[tmp$pID!=1020,] 
     tmp <- tmp[tmp$pID!=1083,] 
     tmp <- tmp[tmp$pID!=1085,] 
-    tmp <- tmp[tmp$pID!=1145,] 
-    tmp <- tmp[tmp$pID!=1020,] 
-  }  
-  else if (this_measure %in% c('MADRS', 'HAMA')){
-    tmp$tp <- factor(tmp$tp, levels=c('bsl', 'A7', 'B7', 'B30', 'B90'))
     tmp <- tmp[tmp$pID!=1129,] 
-  } else {
-    tmp$tp <- factor(tmp$tp, levels=c('bsl', 'A7', 'B7', 'B30'))
-  }
-
+    tmp <- tmp[tmp$pID!=1145,] 
+    }
+  else if (this_measure=='UPDRS_4') {
+    tmp <- tmp[tmp$pID!=1020,] 
+    tmp <- tmp[tmp$pID!=1047,] 
+    tmp <- tmp[tmp$pID!=1051,] 
+    tmp <- tmp[tmp$pID!=1055,] 
+    tmp <- tmp[tmp$pID!=1142,] 
+    }
+  else if (this_measure=='UPDRS_SUM') {
+    tmp <- tmp[tmp$pID!=1020,] 
+    tmp <- tmp[tmp$pID!=1047,] 
+    tmp <- tmp[tmp$pID!=1051,] 
+    tmp <- tmp[tmp$pID!=1055,] 
+    tmp <- tmp[tmp$pID!=1142,] 
+    }
+  
   ### Get omnibus test results
   friedman <- friedman.test(score ~ tp|pID, tmp)
-  coeffs <- c(this_measure, round(friedman$statistic,3), round(friedman$p.value, 3))
+  coeffs <- c(this_measure, friedman$statistic, round(friedman$p.value, 3))
   df_main <- rbind(df_main, coeffs)
   
   ### Get pairwise comparisons

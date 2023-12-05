@@ -8,7 +8,7 @@ import os
 class Controllers():
 
     @staticmethod
-    def make_histograms(df, ignore_measure=[]):
+    def make_histograms(df, ignore_measure=[], output_dir=folders.histograms_dir):
 
         for measure in df.measure.unique():
             print(f'Creating histograms for {measure}.')
@@ -44,20 +44,25 @@ class Controllers():
                 fig=fig,
                 measure = measure,
                 fig_type = 'histogram',
-                output_dir=folders.histograms_dir,
+                output_dir=output_dir,
                 dpi=300)
 
     @staticmethod
-    def make_timeevolutions(df, within_sub_errorbar=True, boost_y=True):
+    def make_timeevolutions(df, within_sub_errorbar=True, boost_y=True, output_dir=folders.timeevols_dir):
 
         for measure in df.measure.unique():
-            print(f'Creating time evolution plot for {measure}.')
+            print(f'Creating time evolution plot for {measure}; settings: within_sub_errorbar={within_sub_errorbar}, boost_y={boost_y}.')
 
             fig = plt.figure()
             ax = fig.add_subplot(1, 1, 1)
 
             tmp_df = df.loc[(df.measure==measure)]
             tps = tmp_df.tp.unique()
+
+            tmp_df['tp'] = pd.Categorical(
+                tmp_df['tp'],
+                categories=['bsl', 'A7', 'B7', 'B30'],
+                ordered=True)
 
             if within_sub_errorbar:
                 tmp_df = Helpers.get_within_sub_errorbar(tmp_df)
@@ -82,7 +87,7 @@ class Controllers():
                 fig=fig,
                 measure = measure,
                 fig_type = 'timeevol',
-                output_dir=folders.timeevols_dir,
+                output_dir = output_dir,
                 dpi=300)
 
 
