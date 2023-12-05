@@ -1,5 +1,7 @@
 **/__pycache__/**
-**/private/**
 data/*
 **/.Rproj.user/**
 .Rproj.user
+
+**/private/**
+private_run.py
