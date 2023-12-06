@@ -51,6 +51,167 @@ class Controllers():
         Helpers.save_data(save, df_master, path=os.path.join(folders.data, 'pdp1_MASTER_v1.csv'))
         return df_master
 
+    @staticmethod
+    def get_5dasc_df(save=True):
+
+        df = pd.read_csv(
+            os.path.join(
+                folders.raw_data,
+                'Clinical',
+                'PDP1-PDP1clinicalOutcomes_DATA_2023-Jul-17.csv'),
+            dtype={'record_id': str})
+
+        df = df.loc[(df.record_id.isin(config.valid_str_pIDs))]
+        df['record_id'] = df['record_id'].astype(int)
+        df = df.rename(columns={
+            'record_id': 'pID',
+            'redcap_event_name': 'tp'})
+
+        df = df.replace({
+            "screening_baseline_arm_1": "bsl",
+            "day_a0_dose_1_arm_1": "A0",
+            "day_a1_arm_1": "A1",
+            "day_a7_arm_1": "A7",
+            "day_b0_dose_2_arm_1": "B0",
+            "day_b1_arm_1": "B1",
+            "day_b7_arm_1": "B7",
+            "day_b11_arm_1": "B11",
+            "day_ab25_arm_1": "B25",
+            "day_ab30_arm_1": "B30",
+            "day_ab90_phone_arm_1": "B90"}, regex=True,)
+
+        boundless_items = [
+            "fivedasc_util_total",
+            "fivedasc_sprit_total",  ## note misnamed column here
+            "fivedasc_bliss_total",
+            "fivedasc_insight_total",
+        ]
+        anxEgoDis_items = [
+            "fivedasc_dis_total",
+            "fivedasc_imp_total",
+            "fivedasc_anx_total"
+        ]
+        visual_items = [
+            "fivedasc_cimg_total",
+            "fivedasc_eimg_total",
+            "fivedasc_av_total",
+            "fivedasc_per_total"
+        ]
+
+        df = df[['tp', 'pID'] + boundless_items + anxEgoDis_items + visual_items]
+        df.dropna(subset=boundless_items + anxEgoDis_items + visual_items, how='all')
+
+        df['fivedasc_util_total'] = df['fivedasc_util_total'] / 5
+        df['fivedasc_sprit_total'] = df['fivedasc_sprit_total'] / 3
+        df['fivedasc_bliss_total'] = df['fivedasc_bliss_total'] / 3
+        df['fivedasc_insight_total'] = df['fivedasc_insight_total'] / 3
+        df['fivedasc_dis_total'] = df['fivedasc_dis_total'] / 3
+        df['fivedasc_imp_total'] = df['fivedasc_imp_total'] / 7
+        df['fivedasc_anx_total'] = df['fivedasc_anx_total'] / 6
+        df['fivedasc_cimg_total'] = df['fivedasc_cimg_total'] / 3
+        df['fivedasc_eimg_total'] = df['fivedasc_eimg_total'] / 3
+        df['fivedasc_av_total'] = df['fivedasc_av_total'] / 3
+        df['fivedasc_per_total'] = df['fivedasc_per_total'] / 3
+
+        # create 3 summary columns that are the averages of the 3 major factors - these are what we'll do our statistics on
+        df['boundlessMean'] = df[boundless_items].mean(axis=1)
+        df['anxiousEgoMean'] = df[anxEgoDis_items].mean(axis=1)
+        df['visionaryMean'] = df[visual_items].mean(axis=1)
+
+        df = df.melt(
+            id_vars = ['pID', 'tp'],
+            value_vars = boundless_items + anxEgoDis_items + visual_items + ['boundlessMean','anxiousEgoMean','visionaryMean']
+        )
+
+        df = df.rename(columns={
+            'value': 'score',
+            'variable': 'measure'})
+
+        df = df.dropna(subset='score')
+
+        Helpers.save_data(save, df, path=os.path.join(folders.processed_data, 'pdp1_5dasc_v1.csv'))
+        return df
+
+    @staticmethod
+    def get_vitals_df(save=True):
+
+        df = pd.read_csv(
+            os.path.join(
+                folders.raw_data,
+                'Clinical',
+                'PDP1-PDP1clinicalOutcomes_DATA_2023-Jul-17.csv'),
+            dtype={'record_id': str})
+
+        df = df.loc[(df.record_id.isin(config.valid_str_pIDs))]
+        df['record_id'] = df['record_id'].astype(int)
+        df = df.rename(columns={
+            'record_id': 'pID',
+            'redcap_event_name': 'tp'})
+
+        df = df.replace({
+            "screening_baseline_arm_1": "bsl",
+            "day_a0_dose_1_arm_1": "A0",
+            "day_a1_arm_1": "A1",
+            "day_a7_arm_1": "A7",
+            "day_b0_dose_2_arm_1": "B0",
+            "day_b1_arm_1": "B1",
+            "day_b7_arm_1": "B7",
+            "day_b11_arm_1": "B11",
+            "day_ab25_arm_1": "B25",
+            "day_ab30_arm_1": "B30",
+            "day_ab90_phone_arm_1": "B90"}, regex=True,)
+
+
+        cols = [col for col in df if (col.startswith('vs_bl')) | (col.startswith('vs_dose')) | (col.startswith('vs_ortho')) ]
+        df = df[ ['pID','tp'] + cols]
+
+        # only keep rows where we collected vital signs of interest
+        #i = ( redcapCompletersDf['redcap_event_name'] == 'A0' ) | ( redcapCompletersDf['redcap_event_name'] == 'B0' )
+        #vitalDf = vitalDf[i]
+
+        df = df.loc[(df.tp.isin(['A0','B0']))]
+        df = df.rename(columns={
+            'vs_bl_dia':'vs_dose0_dia1',
+            'vs_bl_sys':'vs_dose0_sys1',
+            'vs_bl_hr':'vs_dose0_hr1',
+            'vs_bl_temp':'vs_dose0_temp1',
+            'vs_ortho2_sys_sup':'vs_dose420_sys1',
+            'vs_ortho2_dia_sup':'vs_dose420_dia1',
+            'vs_ortho2_hr_sup':'vs_dose420_hr1',
+            'vs_ortho2_temp':'vs_dose420_temp1'})
+
+        cols = [col for col in df if ('sys1' in col) or \
+                ('hr1' in col) or \
+                ('temp1' in col) or \
+                ('dia1' in col)]
+
+        df = df[ ['pID','tp'] + cols]
+
+        # melt all the columns that have vitals data from the dosing days, each of which contains the string 'vs_dose
+        df = df.melt(
+            id_vars=['pID','tp'],
+            value_vars= [col for col in df if ('vs_dose' in col)]
+        )
+
+        # split what was the old columns name, eg 'vs_dose60_hr1'
+        # but is now a column of its own, after melting, into two new columns
+        # which are, in this case, '60' and 'hr'
+        df[['measurementTime','vitalSign']] = df['variable'].str.extract(r'^vs_dose(\d+)_(\w+)\d$')
+        df['measurementTime'] = df['measurementTime'].astype(int)
+        df['vitalSign'].unique()
+
+        df = df.rename(columns={
+            'value': 'score',
+            'vitalSign': 'measure',
+            'measurementTime': 'time'})
+
+        del df['variable']
+        df = df.dropna(subset='score')
+
+        Helpers.save_data(save, df, path=os.path.join(folders.processed_data, 'pdp1_vitals_v1.csv'))
+        return df
+
+
 
 class Core():
 
