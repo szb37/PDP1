@@ -90,6 +90,12 @@ class Controllers():
                 output_dir = output_dir,
                 dpi=300)
 
+    @staticmethod
+    def make_vitals(df, y, y_label, within_sub_errorbar=True, output_dir=folders.vitals_dir):
+
+        pass
+
+
 
 class Helpers:
 

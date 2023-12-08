@@ -6,8 +6,8 @@ library(tidyr)
 library(dplyr)
 library(here)
 
-source(paste(here(),'/R models/load_pdp1.r', sep=''))
-df_data <- load_pdp1()
+source(paste(here(),'/R models/pdp1_helpers.r', sep=''))
+df_data <- load_pdp1_data()
 
 ### Do models
 df_stats <- data.frame()
@@ -86,9 +86,7 @@ df_stats$tp <- sub('tpB7',  'tp(B7)', df_stats$tp)
 df_stats$tp <- sub('tpB30', 'tp(B30)', df_stats$tp)
 df_stats$tp <- sub('tpB90', 'tp(B90)', df_stats$tp)
 
-
-
-
+### Save
 df_stats <- df_stats[, c("measure", "tp", "est", "SE", "df", "t.value", "p.value", "sig", "adj.p.value", "adj.sig")]  
 export_dir <- paste(here(),'/exports',sep='')
 write.csv(df_stats, file=paste(export_dir,'/pdp1_mixed_models_v1.csv', sep=''), row.names=FALSE)

@@ -24,11 +24,11 @@ class Controllers():
             Core.format_UPDRS_data(save=save)
             Core.format_PRL_data(save=save)
 
-        df_clinical = pd.read_csv(os.path.join(folders.processed_data, 'pdp1_clinical_v1.csv'))
-        df_cantab = pd.read_csv(os.path.join(folders.processed_data, 'pdp1_cantab_v1.csv'))
-        df_updrs = pd.read_csv(os.path.join(folders.processed_data, 'pdp1_updrs_v1.csv'))
-        df_demo = pd.read_csv(os.path.join(folders.processed_data, 'pdp1_demography_v1.csv'))
-        df_prl = pd.read_csv(os.path.join(folders.processed_data, 'pdp1_prl_v1.csv'))
+        df_clinical = pd.read_csv(os.path.join(folders.processed, 'pdp1_clinical_v1.csv'))
+        df_cantab = pd.read_csv(os.path.join(folders.processed, 'pdp1_cantab_v1.csv'))
+        df_updrs = pd.read_csv(os.path.join(folders.processed, 'pdp1_updrs_v1.csv'))
+        df_demo = pd.read_csv(os.path.join(folders.processed, 'pdp1_demography_v1.csv'))
+        df_prl = pd.read_csv(os.path.join(folders.processed, 'pdp1_prl_v1.csv'))
 
         df_master = pd.concat([df_cantab, df_clinical, df_prl, df_updrs], ignore_index=True)
         df_master['pID'] = df_master['pID'].astype(int)
@@ -129,7 +129,7 @@ class Controllers():
 
         df = df.dropna(subset='score')
 
-        Helpers.save_data(save, df, path=os.path.join(folders.processed_data, 'pdp1_5dasc_v1.csv'))
+        Helpers.save_data(save, df, path=os.path.join(folders.processed, 'pdp1_5dasc_v1.csv'))
         return df
 
     @staticmethod
@@ -208,7 +208,11 @@ class Controllers():
         del df['variable']
         df = df.dropna(subset='score')
 
-        Helpers.save_data(save, df, path=os.path.join(folders.processed_data, 'pdp1_vitals_v1.csv'))
+        # Convert temperatures values greater than 60 from Fahrenheit to Celsius
+        i = (df['measure']=='temp') & (df['score']>60)
+        df.loc[i, 'score'] = Helpers.fahrenheit_to_celsius(df.loc[i, 'score'])
+
+        Helpers.save_data(save, df, path=os.path.join(folders.processed, 'pdp1_vitals_v1.csv'))
         return df
 
 
@@ -277,7 +281,7 @@ class Core():
 
         df['test'] = df['measure']
         df = Helpers.standardize_df(df)
-        Helpers.save_data(save, df, path=os.path.join(folders.processed_data, 'pdp1_clinical_v1.csv'))
+        Helpers.save_data(save, df, path=os.path.join(folders.processed, 'pdp1_clinical_v1.csv'))
         return df
 
     @staticmethod
@@ -314,7 +318,7 @@ class Core():
         df['test'] = df.apply(Helpers.get_test, axis=1)
 
         df = Helpers.standardize_df(df)
-        Helpers.save_data(save, df, path=os.path.join(folders.processed_data, 'pdp1_cantab_v1.csv'))
+        Helpers.save_data(save, df, path=os.path.join(folders.processed, 'pdp1_cantab_v1.csv'))
         return df
 
     @staticmethod
@@ -345,7 +349,7 @@ class Core():
         df['tp'] = df['tp'].replace('Screening', 'bsl', regex=True)
 
         df = Helpers.standardize_df(df)
-        Helpers.save_data(save, df, path=os.path.join(folders.processed_data, 'pdp1_prl_v1.csv'))
+        Helpers.save_data(save, df, path=os.path.join(folders.processed, 'pdp1_prl_v1.csv'))
         return df
 
     @staticmethod
@@ -386,7 +390,7 @@ class Core():
 
         df = pd.merge(df, df_led, on='pID', how='inner')
 
-        Helpers.save_data(save, df, path=os.path.join(folders.processed_data, 'pdp1_demography_v1.csv'))
+        Helpers.save_data(save, df, path=os.path.join(folders.processed, 'pdp1_demography_v1.csv'))
         return df
 
     @staticmethod
@@ -512,7 +516,7 @@ class Core():
         df['test'] = 'UPDRS'
 
         df = Helpers.standardize_df(df)
-        Helpers.save_data(save, df, path=os.path.join(folders.processed_data, 'pdp1_updrs_v1.csv'))
+        Helpers.save_data(save, df, path=os.path.join(folders.processed, 'pdp1_updrs_v1.csv'))
         return df
 
 
@@ -584,3 +588,7 @@ class Helpers():
             df_master.loc[(df_master.pID==pID), 'severity'] = bsl_val
 
         return df_master
+
+    @staticmethod
+    def fahrenheit_to_celsius(temp_f):
+        return round((temp_f-32)*5/9,2)

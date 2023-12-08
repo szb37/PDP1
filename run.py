@@ -27,6 +27,11 @@ if True: # create master DF from raw data files
 
 
 """ plots """
+if True: # make vitals
+    plots.Controllers.make_vitals(
+        df=pd.read_csv(
+            os.path.join(folders.processed, 'pdp1_vitals_v1.csv')))
+
 if False: # make histograms
     plots.Controllers.make_histograms(
         df=pd.read_csv(
