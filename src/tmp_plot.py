@@ -5,19 +5,9 @@ import seaborn as sns
 import pandas as pd
 import os
 
-sns.set_context(font_scale=3.75)
-sns.set_style("whitegrid")
-sns.despine()
-
 df=pd.read_csv(
     os.path.join(folders.processed, 'pdp1_vitals_v1.csv'))
 
-'''
-df["tp"] = pd.Categorical(
-    df["tp"],
-    categories=df.time.unique(),
-    ordered=True)
-'''
 
 fig = plt.figure()
 ax = fig.add_subplot(1, 1, 1)
@@ -36,8 +26,6 @@ ax = sns.lineplot(
     markersize=10,
     dashes=False,
 )
-
-
 
 
 ax.set_xticks([0, 30, 60, 90, 120, 240, 360, 420])

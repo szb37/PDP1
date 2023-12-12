@@ -3,4 +3,6 @@
 .Rproj.user
 
 **/private/**
-data/* 
+tmp_*
+tmp/*
+data/*

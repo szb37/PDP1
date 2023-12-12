@@ -3,12 +3,13 @@ import src.config as config
 import src.folders as folders
 import seaborn as sns
 import pandas as pd
+import numpy as np
 import os
 
 class Controllers():
 
     @staticmethod
-    def make_histograms(df, ignore_measure=[], output_dir=folders.histograms_dir):
+    def make_histograms(df, ignore_measure=[], out_dir=folders.histograms):
 
         for measure in df.measure.unique():
             print(f'Creating histograms for {measure}.')
@@ -44,33 +45,35 @@ class Controllers():
                 fig=fig,
                 measure = measure,
                 fig_type = 'histogram',
-                output_dir=output_dir,
+                out_dir=out_dir,
                 dpi=300)
 
     @staticmethod
-    def make_timeevolutions(df, within_sub_errorbar=True, boost_y=True, output_dir=folders.timeevols_dir):
+    def make_agg_timeevols(df, errorbar_corr=True, boost_y=True, out_dir=folders.agg_timeevols):
 
         for measure in df.measure.unique():
-            print(f'Creating time evolution plot for {measure}; settings: within_sub_errorbar={within_sub_errorbar}, boost_y={boost_y}.')
+            print(f'AGG timeevol plot: {measure}; errorbar_corr: {errorbar_corr}, boost_y: {boost_y}')
 
             fig = plt.figure()
             ax = fig.add_subplot(1, 1, 1)
 
-            tmp_df = df.loc[(df.measure==measure)]
+            tmp_df = df.loc[(df.measure==measure)].copy()
             tps = tmp_df.tp.unique()
 
-            tmp_df['tp'] = pd.Categorical(
-                tmp_df['tp'],
+            tmp_df['tp'] = tmp_df['tp'].astype(
+                pd.CategoricalDtype(
                 categories=['bsl', 'A7', 'B7', 'B30'],
-                ordered=True)
+                ordered=True))
 
-            if within_sub_errorbar:
-                tmp_df = Helpers.get_within_sub_errorbar(tmp_df)
+            if errorbar_corr:
+                tmp_df = Helpers.get_errorbar_corr(tmp_df)
 
             sns.lineplot(
                 x='tp', y='score', data=tmp_df,
                 marker='o', markersize=12,
                 err_style="bars", errorbar="ci", err_kws={'capsize':4, 'elinewidth': 1.5, 'capthick': 1.5})
+
+            ax.xaxis.grid(False)
 
             if boost_y:
                 y_high = ax.get_ylim()[1]
@@ -85,51 +88,146 @@ class Controllers():
 
             Helpers.save_fig(
                 fig=fig,
-                measure = measure,
-                fig_type = 'timeevol',
-                output_dir = output_dir,
-                dpi=300)
+                out_dir = out_dir,
+                filename=f'pdp1_agg_timeevol_{measure}')
 
     @staticmethod
-    def make_vitals(df, y, y_label, within_sub_errorbar=True, output_dir=folders.vitals_dir):
+    def make_ind_timeevols(df, out_dir=folders.ind_timeevols):
 
-        pass
+        for measure in df.measure.unique():
+            print(f'IND timeevol plot: {measure}')
 
+            fig = plt.figure()
+            ax = fig.add_subplot(1, 1, 1)
+
+            tmp_df = df.loc[(df.measure==measure)].copy()
+            tps = tmp_df.tp.unique()
+
+            tmp_df['tp'] = tmp_df['tp'].astype(
+                pd.CategoricalDtype(
+                categories=['bsl', 'A7', 'B7', 'B30'],
+                ordered=True))
+
+            sns.lineplot(
+                x='tp',
+                y='score',
+                hue='pID',
+                palette='muted',
+                dashes=False,
+                data=tmp_df,
+                #marker='o',
+                markersize=10,)
+
+            plt.legend(bbox_to_anchor=(1, 1), loc='upper left')
+            fig.set_size_inches([9.6, 4.8])
+
+            ax.xaxis.grid(False)
+            ax.set_xlabel('Timepoint', fontdict=config.axislabel_fontdict)
+            ax.set_ylabel('Score', fontdict=config.axislabel_fontdict)
+            ax.tick_params(axis='both', which='major', labelsize=config.ticklabel_fontsize)
+            ax.set_title(measure, fontdict=config.title_fontdict)
+
+            Helpers.save_fig(
+                fig=fig,
+                out_dir=out_dir,
+                filename=f'pdp1_ind_timeevol_{measure}')
+
+    @staticmethod
+    def make_vitals(df, y, errorbar_corr=True, out_dir=folders.vitals):
+
+        assert y in ['temp', 'dia', 'sys', 'hr']
+
+        """ Plot temperature """
+        fig = plt.figure()
+        ax = fig.add_subplot(1, 1, 1)
+        tmp_df = df.loc[(df.measure==y)]
+
+        if errorbar_corr:
+            tmp_df = Helpers.get_errorbar_corr(tmp_df)
+
+        ax = sns.lineplot(
+            data = tmp_df,
+            x = 'time',
+            y = 'score',
+            hue = 'tp',
+            errorbar = ("se"),
+            err_style = "bars",
+            err_kws={"capsize": 5, "elinewidth": 1.5},
+            style="tp",
+            markers=["D", "D"],
+            markersize=10,
+            dashes=False,
+            legend=False,
+            palette = 'deep'
+        )
+
+        ax.set_xticks([0, 30, 60, 90, 120, 240, 360, 420])
+        ax.set_xlabel('Time [min]', fontdict=config.axislabel_fontdict)
+        ax.tick_params(axis='both', which='major', labelsize=config.ticklabel_fontsize)
+        ax.xaxis.grid(False)
+
+        if y=='temp':
+            ax.set_ylabel(
+                'Body temperature [°C]',
+                fontdict=config.axislabel_fontdict)
+        elif y=='dia':
+            ax.set_ylabel(
+                'Diastolic BP [mmHg]',
+                fontdict=config.axislabel_fontdict)
+        elif y=='sys':
+            ax.set_ylabel(
+                'Systolic BP [mmHg]',
+                fontdict=config.axislabel_fontdict)
+        elif y=='hr':
+            ax.set_ylabel(
+                'Heart rate [BPM]',
+                fontdict=config.axislabel_fontdict)
+        else:
+            assert False
+
+        Helpers.save_fig(fig, y, 'vitals', out_dir, dpi=300)
 
 
 class Helpers:
 
     @staticmethod
-    def save_fig(fig, measure, fig_type, output_dir, dpi=300):
+    def save_fig(fig, out_dir, filename):
 
-        fig.savefig(
-            fname=os.path.join(output_dir, f'pdp1_{fig_type}_{measure}.png'),
-            format='png',
-            dpi=dpi,
-        )
-        fig.savefig(
-            fname=os.path.join(output_dir, f'pdp1_{fig_type}_{measure}.svg'),
-            format='svg',
-            dpi=dpi,
-        )
-        del fig
+        if config.savePNG:
+            fig.savefig(
+                fname=os.path.join(out_dir, f'{filename}.png'),
+                format='png',
+                dpi=300,)
+
+        if config.saveSVG:
+            fig.savefig(
+                fname=os.path.join(out_dir, f'{filename}.svg'),
+                format='svg',
+                dpi=300,)
+
         plt.close()
 
     @staticmethod
-    def get_within_sub_errorbar(df):
+    def get_errorbar_corr(df):
         """ Create adjustment factor: (grand_mean - each_subject_mean)
             Adjust error bars for within subject design, see:
                 - https://stats.stackexchange.com/questions/574379/correcting-repeated-measures-data-to-display-error-bars-that-show-within-subject
                 - https://www.cogsci.nl/blog/tutorials/156-an-easy-way-to-create-graphs-with-within-subject-error-bars
         """
 
+        df = df.reset_index()
         grand_mean = df['score'].mean()
+        df['ws_adj_factor']=0
+        col_idx = df.columns.get_loc('ws_adj_factor')
 
         for pID in df.pID.unique():
-            subject_mean = df[df['pID'] == pID]['score'].mean()
-            df.loc[(df.pID==pID), 'ws_adj_factor'] = grand_mean - subject_mean
+            subject_mean = df.loc[(df.pID==pID), 'score'].mean()
+            rows = df.loc[df.pID==pID].index
+            df.iloc[rows, col_idx] = grand_mean - subject_mean
 
-        df['adj_score'] = df['score'] + df['ws_adj_factor']
+        subset = df[['score', 'ws_adj_factor']].copy()
+        df.loc[:, 'adj_score'] = subset['score'] + subset['ws_adj_factor']
+
         df = df.drop(columns=['score', 'ws_adj_factor'])
         df = df.rename(columns={'adj_score': 'score'})
 

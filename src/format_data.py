@@ -56,7 +56,7 @@ class Controllers():
 
         df = pd.read_csv(
             os.path.join(
-                folders.raw_data,
+                folders.raw,
                 'Clinical',
                 'PDP1-PDP1clinicalOutcomes_DATA_2023-Jul-17.csv'),
             dtype={'record_id': str})
@@ -137,7 +137,7 @@ class Controllers():
 
         df = pd.read_csv(
             os.path.join(
-                folders.raw_data,
+                folders.raw,
                 'Clinical',
                 'PDP1-PDP1clinicalOutcomes_DATA_2023-Jul-17.csv'),
             dtype={'record_id': str})
@@ -224,7 +224,7 @@ class Core():
 
         df = pd.read_csv(
             os.path.join(
-                folders.raw_data,
+                folders.raw,
                 'Clinical',
                 'PDP1-PDP1clinicalOutcomes_DATA_2023-Jul-17.csv'),
             dtype={'record_id': str})
@@ -288,7 +288,7 @@ class Core():
     def format_CANTAB_data(save):
 
         df = pd.read_csv(os.path.join(
-            folders.raw_data,
+            folders.raw,
             'CANTAB',
             'RowByMeasureNorms_PDP1_duplicate_clean.csv'))
 
@@ -325,11 +325,11 @@ class Core():
     def format_PRL_data(save):
 
         df_index = pd.read_csv(os.path.join(
-            folders.raw_data,
+            folders.raw,
             'PRL',
             'PDP1_reversalLearningIndex.csv'))
 
-        raws_folder = os.path.join(folders.raw_data, 'PRL', 'raws')
+        raws_folder = os.path.join(folders.raw, 'PRL', 'raws')
         for idx, csv_filename in enumerate([f for f in os.listdir(raws_folder) if f.endswith('.csv')]):
             if idx==0:
                 df = pd.read_csv(os.path.join(raws_folder, csv_filename))
@@ -356,7 +356,7 @@ class Core():
     def format_demographic_data(save):
 
         df = pd.read_csv(os.path.join(
-            folders.raw_data,
+            folders.raw,
             'CANTAB',
             'RowByMeasureNorms_PDP1_duplicate_clean.csv'))
 
@@ -377,7 +377,7 @@ class Core():
 
         ### Process LED intake
         df_led = pd.read_csv(os.path.join(
-            folders.raw_data,
+            folders.raw,
             'pdp1_LED_intake.csv',))
 
         df_led = df_led.rename(columns={
@@ -398,7 +398,7 @@ class Core():
 
         df = pd.read_csv(
             os.path.join(
-                folders.raw_data,
+                folders.raw,
                 'Clinical',
                 'PDP1-PDP1clinicalOutcomes_DATA_2023-Jul-17.csv'),
             dtype={'record_id': str})
