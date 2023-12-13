@@ -12,7 +12,7 @@ class Controllers():
     def make_histograms(df, ignore_measure=[], out_dir=folders.histograms):
 
         for measure in df.measure.unique():
-            print(f'Creating histograms for {measure}.')
+            print(f'Create HIST plot: {measure}')
 
             if measure in ignore_measure:
                 continue
@@ -42,17 +42,15 @@ class Controllers():
             plt.tight_layout()
 
             Helpers.save_fig(
-                fig=fig,
-                measure = measure,
-                fig_type = 'histogram',
-                out_dir=out_dir,
-                dpi=300)
+                fig = fig,
+                out_dir = out_dir,
+                filename = f'histogram_{measure}')
 
     @staticmethod
     def make_agg_timeevols(df, errorbar_corr=True, boost_y=True, out_dir=folders.agg_timeevols):
 
         for measure in df.measure.unique():
-            print(f'AGG timeevol plot: {measure}; errorbar_corr: {errorbar_corr}, boost_y: {boost_y}')
+            print(f'Create AGG timeevol plot: {measure}; errorbar_corr: {errorbar_corr}, boost_y: {boost_y}')
 
             fig = plt.figure()
             ax = fig.add_subplot(1, 1, 1)
@@ -87,15 +85,15 @@ class Controllers():
             ax.set_title(measure, fontdict=config.title_fontdict)
 
             Helpers.save_fig(
-                fig=fig,
+                fig = fig,
                 out_dir = out_dir,
-                filename=f'pdp1_agg_timeevol_{measure}')
+                filename = f'pdp1_agg_timeevol_{measure}')
 
     @staticmethod
     def make_ind_timeevols(df, out_dir=folders.ind_timeevols):
 
         for measure in df.measure.unique():
-            print(f'IND timeevol plot: {measure}')
+            print(f'Create IND timeevol plot: {measure}')
 
             fig = plt.figure()
             ax = fig.add_subplot(1, 1, 1)
@@ -128,9 +126,9 @@ class Controllers():
             ax.set_title(measure, fontdict=config.title_fontdict)
 
             Helpers.save_fig(
-                fig=fig,
-                out_dir=out_dir,
-                filename=f'pdp1_ind_timeevol_{measure}')
+                fig = fig,
+                out_dir = out_dir,
+                filename = f'pdp1_ind_timeevol_{measure}')
 
     @staticmethod
     def make_vitals(df, y, errorbar_corr=True, out_dir=folders.vitals):
@@ -185,7 +183,10 @@ class Controllers():
         else:
             assert False
 
-        Helpers.save_fig(fig, y, 'vitals', out_dir, dpi=300)
+        Helpers.save_fig(
+            fig = fig,
+            out_dir = out_dir,
+            filename = f'vitals_{y}')
 
 
 class Helpers:
