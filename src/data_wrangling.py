@@ -297,14 +297,8 @@ class Core():
         df = df.loc[(df.pID.isin(config.valid_pIDs))]
 
         df = df.replace({'Screen': 'bsl', 'A/B30': 'B30'})
-
-        key_measures=[
-          'PALFAMS','PALTEA', # Memory
-          'RTIFMDMT','RTIFMDRT','RTISMDMT', 'RTISMDRT', # Attention & Psychomotor Speed; NO NORM
-          'MTSCFAPC','MTSCTAPC','MTSPS82','MTSRCAMD','MTSRFAMD', # Attention & Psychomotor Speed; NO NORM
-          'OTSMDLFC', 'OTSPSFC', # Executive Function
-          'SWMBE12','SWMBE4','SWMBE468','SWMBE6','SWMBE8','SWMS' # Executive Function
-        ]
+        key_measures = [ # Extracts all strings within dict values
+            string for string_list in config.cantab_measures.values() for string in string_list]
 
         df = df.loc[(df.measure.isin(key_measures))]
         df['test'] = df.apply(Helpers.get_test, axis=1)
@@ -312,7 +306,6 @@ class Core():
         if add_z:
             df = Core.add_CANTAB_meanZ(df)
 
-        import pdb; pdb.set_trace()
         df = Helpers.standardize_df(df)
         df.to_csv(os.path.join(folder, filename), index=False)
         return df
