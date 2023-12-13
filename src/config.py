@@ -15,3 +15,11 @@ ticklabel_fontsize = 14
 
 valid_pIDs=[1002,1020,1034,1047,1051,1055,1083,1085,1086,1129,1142,1145]
 valid_str_pIDs=['1002','1020','1034','1047','1051','1055','1083','1085','1086','1129','1142','1145']
+
+cantab_measures={
+  'PAL': ['PALFAMS','PALTEA'], # Memory
+  'RTI': ['RTIFMDMT','RTIFMDRT','RTISMDMT', 'RTISMDRT'],  # Attention & Psychomotor Speed
+  'MTS': ['MTSCFAPC','MTSCTAPC','MTSPS82','MTSRCAMD','MTSRFAMD'], # Attention & Psychomotor Speed
+  'OTS': ['OTSMDLFC', 'OTSPSFC'], # Executive Function
+  'SWM': ['SWMBE12','SWMBE4','SWMBE468','SWMBE6','SWMBE8','SWMS'], # Executive Function
+}

@@ -1,6 +1,7 @@
 from itertools import product
 import src.folders as folders
 import src.config as config
+from scipy.stats import zscore
 import pandas as pd
 import numpy as np
 import datetime
@@ -276,7 +277,7 @@ class Core():
         return df
 
     @staticmethod
-    def format_CANTAB_data(folder=folders.data, filename='pdp1_cantab.csv'):
+    def format_CANTAB_data(add_z=True, folder=folders.data, filename='pdp1_cantab.csv'):
 
         df = pd.read_csv(os.path.join(
             folders.raw,
@@ -308,9 +309,41 @@ class Core():
         df = df.loc[(df.measure.isin(key_measures))]
         df['test'] = df.apply(Helpers.get_test, axis=1)
 
+        if add_z:
+            df = Core.add_CANTAB_meanZ(df)
+
+        import pdb; pdb.set_trace()
         df = Helpers.standardize_df(df)
         df.to_csv(os.path.join(folder, filename), index=False)
         return df
+
+    @staticmethod
+    def add_CANTAB_meanZ(df):
+        """ Calculates z-score for each CANTAB outcome and then calculates
+            mean z-score across measures for each test.
+            This mean z-score across the test's measures is saved as Z_{test name}
+        """
+
+        for test in config.cantab_measures.keys():
+            tmp = df[df['measure'].isin(config.cantab_measures[test])].copy()
+            tmp = pd.pivot_table(tmp, index=['tp','pID'], columns='measure', values= 'score')
+            tmp.columns.name = None
+            tmp = tmp.reset_index()
+
+            for measure in config.cantab_measures[test]:
+                tmp[f'Z_{measure}'] = zscore(tmp[measure], nan_policy='omit')
+                del tmp[measure]
+
+            tmp[f'Z_{test}'] = round(tmp[tmp.filter(like='Z_').columns].mean(axis=1),3)
+            tmp = tmp[['pID', 'tp', f'Z_{test}']]
+            tmp['measure'] = f'Z_{test}'
+            tmp['test'] = f'Z_{test}'
+            tmp = tmp.rename(columns={f'Z_{test}': 'score'})
+
+            df = pd.concat([df, tmp])
+
+        return df
+
 
     @staticmethod
     def format_PRL_data(folder=folders.data, filename='pdp1_prl.csv'):
