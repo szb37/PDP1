@@ -2,6 +2,10 @@
 To reproduce findings:
     - run from the included conda environment
     - run from codebase folder
+
+    df = data.Controllers.merge_5dasc_df(
+        pd.read_csv(os.path.join(folders.data, 'pdp1_MASTER_v1.csv')),
+        df_5d)
 """
 import src.format_data as data
 import src.analysis as analysis
@@ -13,20 +17,25 @@ import os
 
 
 """ process data """
-if True: # create master DF from raw data files
+if False: # create master DF from raw data files
     df = data.Controllers.get_master_df(
         process_raws=True)
 
-if True: # create 5DASC DF from raw data files
+if False: # create 5DASC DF from raw data files
     df_5d = data.Controllers.get_5dasc_df()
-
-    df = data.Controllers.merge_5dasc_df(
-        pd.read_csv(os.path.join(folders.data, 'pdp1_MASTER_v1.csv')),
-        df_5d)
 
 if False: # create vitals DF from raw data files
     df_vitals = data.Controllers.get_vitals_df(
         save=False,)
+
+if True: # create master DF with all potential bsl covariates
+    df = data.Controllers.get_covariates_master_df(
+        df = pd.read_csv(
+            os.path.join(folders.data, 'pdp1_MASTER_v1.csv')),
+        df_5dasc = pd.read_csv(
+            os.path.join(folders.processed, 'pdp1_5dasc_v1.csv')),
+        df_demo = pd.read_csv(
+            os.path.join(folders.processed, 'pdp1_demography_v1.csv')),)
 
 
 """ plots """
@@ -56,7 +65,7 @@ if False: # make histograms
         df=pd.read_csv(
             os.path.join(folders.data, 'pdp1_MASTER_v1.csv')))
 
-if False: # make time evolution plots
+if False: # make agg/ind time evolution plots
 
     plots.Controllers.make_ind_timeevols(
         df=pd.read_csv(

@@ -11,32 +11,25 @@ import os
 class Controllers():
 
     @staticmethod
-    def get_master_df(process_raws=True, folder=folders.data, filename='pdp1_MASTER_v1.csv'):
+    def get_master_df(folder=folders.data, filename='pdp1_MASTER_v1.csv'):
         """ Creates and saves master DF from raw input data
         """
 
-        assert isinstance(process_raws, bool)
-
-        if process_raws:
-            Core.format_demographic_data()
-            Core.format_clinical_data()
-            Core.format_CANTAB_data()
-            Core.format_UPDRS_data()
-            Core.format_PRL_data()
+        Core.format_demographic_data()
+        Core.format_clinical_data()
+        Core.format_CANTAB_data()
+        Core.format_UPDRS_data()
+        Core.format_PRL_data()
 
         df_clinical = pd.read_csv(os.path.join(folders.processed, 'pdp1_clinical_v1.csv'))
         df_cantab = pd.read_csv(os.path.join(folders.processed, 'pdp1_cantab_v1.csv'))
         df_updrs = pd.read_csv(os.path.join(folders.processed, 'pdp1_updrs_v1.csv'))
-        df_demo = pd.read_csv(os.path.join(folders.processed, 'pdp1_demography_v1.csv'))
         df_prl = pd.read_csv(os.path.join(folders.processed, 'pdp1_prl_v1.csv'))
 
         df_master = pd.concat([df_cantab, df_clinical, df_prl, df_updrs], ignore_index=True)
         df_master['pID'] = df_master['pID'].astype(int)
-        df_master = df_master[df_master['measure']!='MTSCTAPC'] # Failed measure, all values=100
         df_master = df_master.reset_index(drop=True)
-        df_master = Helpers.add_covariates(df_master, df_demo)
 
-        ### Save results
         df_master.to_csv(os.path.join(folder, filename), index=False)
         return df_master
 
@@ -204,14 +197,11 @@ class Controllers():
         return df
 
     @staticmethod
-    def merge_5dasc_df(df, df_5dasc, folder=folders.processed, filename='pdp1_master_w5DASC_v1.csv'):
+    def get_covariates_master_df(df, df_5dasc, df_demo, folder=folders.processed, filename='pdp1_master_covs.csv'):
 
-        for measure, pID in product(df_5dasc.measure.unique(), df.pID.unique()):
-
-            tmp = df_5dasc[(df_5dasc['pID']==pID) & (df_5dasc['measure']==measure)]
-            assert tmp.shape==(2,4)
-            pID_mean = round(tmp.score.mean(), 2)
-            df.loc[df['pID']==pID, measure] =  pID_mean
+        df = Core.add_demographic_covariates(df, df_demo)
+        df = Core.add_depanx_covariates(df)
+        df = Core.add_5DASC_covariates(df, df_5dasc)
 
         df.to_csv(os.path.join(folder, filename), index=False)
         return df
@@ -280,6 +270,7 @@ class Core():
             'ccfq_bl_total': 'CCFQ'})
 
         df['test'] = df['measure']
+        df = df[df['measure']!='MTSCTAPC'] # Failed measure, all values=100
         df = Helpers.standardize_df(df)
         df.to_csv(os.path.join(folder, filename), index=False)
         return df
@@ -518,6 +509,69 @@ class Core():
         df.to_csv(os.path.join(folder, filename), index=False)
         return df
 
+    @staticmethod
+    def add_demographic_covariates(df, df_demo):
+
+        ### Add variables from df_demo
+        for bsl_var in ['gender', 'edu', 'age', 'LED']:
+            df[bsl_var]=None
+            col_idx = df_demo.columns.get_loc(bsl_var)
+
+            for pID in df.pID.unique():
+                row_idx = df_demo[df_demo['pID']==pID].index[0]
+                bsl_val = df_demo.iloc[row_idx, col_idx]
+                df.loc[(df.pID==pID), bsl_var] = bsl_val
+
+        ### Add UPDRS_3 as bsl_severity measure
+        col_idx = df.columns.get_loc('score')
+        for pID in df.pID.unique():
+
+            row_idx = df.loc[
+                (df.pID==pID) &
+                (df.measure=='UPDRS_3') &
+                (df.tp=='bsl')].index
+
+            assert len(row_idx)==1
+
+            bsl_val = df.iloc[ row_idx[0], col_idx]
+            df.loc[(df.pID==pID), 'severity'] = bsl_val
+
+        return df
+
+    @staticmethod
+    def add_5DASC_covariates(df, df_5dasc):
+
+        for measure, pID in product(df_5dasc.measure.unique(), df.pID.unique()):
+            tmp = df_5dasc[(df_5dasc['pID']==pID) & (df_5dasc['measure']==measure)]
+            assert tmp.shape==(2,4)
+            pID_mean = round(tmp.score.mean(), 2)
+            df.loc[df['pID']==pID, measure] =  pID_mean
+
+        return df
+
+    @staticmethod
+    def add_depanx_covariates(df):
+        """ 15+ MADRS @ baseline => depressed
+            14+ HAMA @ baseline => anxious
+        """
+        score_idx = df.columns.get_loc('score')
+
+        for pID in df.pID.unique():
+
+            ### Add is_anxious
+            hama_pid = df[(df['pID']==pID) & (df['measure']=='HAMA') & (df['tp']=='bsl')]
+            assert hama_pid.shape[0]==1
+            bsl_hama = df.iloc[hama_pid.index[0], score_idx]
+            df.loc[df['pID']==pID, 'is_anx'] = bsl_hama>14
+
+            ### Add is_depressed
+            madrs_pid = df[(df['pID']==pID) & (df['measure']=='MADRS') & (df['tp']=='bsl')]
+            assert madrs_pid.shape[0]==1
+            bsl_madrs = df.iloc[madrs_pid.index[0], score_idx]
+            df.loc[df['pID']==pID, 'is_dep'] = bsl_madrs>15
+
+        return df
+
 
 class Helpers():
 
@@ -550,35 +604,6 @@ class Helpers():
         df = df.sort_values(by=['pID', 'tp', 'measure'])
         df = df.drop_duplicates()
         return df
-
-    @staticmethod
-    def add_covariates(df_master, df_demo):
-
-        ### Add variables from df_demo
-        for bsl_var in ['gender', 'edu', 'age', 'LED']:
-            df_master[bsl_var]=None
-            col_idx = df_demo.columns.get_loc(bsl_var)
-
-            for pID in df_master.pID.unique():
-                row_idx = df_demo[df_demo['pID']==pID].index[0]
-                bsl_val = df_demo.iloc[row_idx, col_idx]
-                df_master.loc[(df_master.pID==pID), bsl_var] = bsl_val
-
-        ### Add UPDRS_3 as bsl_severity measure
-        col_idx = df_master.columns.get_loc('score')
-        for pID in df_master.pID.unique():
-
-            row_idx = df_master.loc[
-                (df_master.pID==pID) &
-                (df_master.measure=='UPDRS_3') &
-                (df_master.tp=='bsl')].index
-
-            assert len(row_idx)==1
-
-            bsl_val = df_master.iloc[ row_idx[0], col_idx]
-            df_master.loc[(df_master.pID==pID), 'severity'] = bsl_val
-
-        return df_master
 
     @staticmethod
     def fahrenheit_to_celsius(temp_f):
