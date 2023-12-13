@@ -1,3 +1,4 @@
+from itertools import product
 import src.folders as folders
 import src.config as config
 import pandas as pd
@@ -10,19 +11,18 @@ import os
 class Controllers():
 
     @staticmethod
-    def get_master_df(save=True, process_raws=True):
+    def get_master_df(process_raws=True, folder=folders.data, filename='pdp1_MASTER_v1.csv'):
         """ Creates and saves master DF from raw input data
         """
 
-        assert isinstance(save, bool)
         assert isinstance(process_raws, bool)
 
         if process_raws:
-            Core.format_demographic_data(save=save)
-            Core.format_clinical_data(save=save)
-            Core.format_CANTAB_data(save=save)
-            Core.format_UPDRS_data(save=save)
-            Core.format_PRL_data(save=save)
+            Core.format_demographic_data()
+            Core.format_clinical_data()
+            Core.format_CANTAB_data()
+            Core.format_UPDRS_data()
+            Core.format_PRL_data()
 
         df_clinical = pd.read_csv(os.path.join(folders.processed, 'pdp1_clinical_v1.csv'))
         df_cantab = pd.read_csv(os.path.join(folders.processed, 'pdp1_cantab_v1.csv'))
@@ -36,23 +36,12 @@ class Controllers():
         df_master = df_master.reset_index(drop=True)
         df_master = Helpers.add_covariates(df_master, df_demo)
 
-        ### Do not remove extreme values in consensus w Ellen
-        '''
-        row_idx_todelete = [idx for idx in df_master[
-            (df_master['pID']==1051) & (df_master['measure']=='RTISMDMT')].index]
-        df_master = df_master.drop(row_idx_todelete)
-
-        row_idx_todelete = [idx for idx in df_master[
-            (df_master['pID']==1051) & (df_master['measure']=='RTISMDRT')].index]
-        df_master = df_master.drop(row_idx_todelete)
-        '''
-
         ### Save results
-        Helpers.save_data(save, df_master, path=os.path.join(folders.data, 'pdp1_MASTER_v1.csv'))
+        df_master.to_csv(os.path.join(folder, filename), index=False)
         return df_master
 
     @staticmethod
-    def get_5dasc_df(save=True):
+    def get_5dasc_df(folder=folders.processed, filename='pdp1_5dasc_v1.csv'):
 
         df = pd.read_csv(
             os.path.join(
@@ -128,12 +117,11 @@ class Controllers():
             'variable': 'measure'})
 
         df = df.dropna(subset='score')
-
-        Helpers.save_data(save, df, path=os.path.join(folders.processed, 'pdp1_5dasc_v1.csv'))
+        df.to_csv(os.path.join(folder, filename), index=False)
         return df
 
     @staticmethod
-    def get_vitals_df(save=True):
+    def get_vitals_df(folder=folders.processed, filename='pdp1_vitals_v1.csv'):
 
         df = pd.read_csv(
             os.path.join(
@@ -212,15 +200,27 @@ class Controllers():
         i = (df['measure']=='temp') & (df['score']>60)
         df.loc[i, 'score'] = Helpers.fahrenheit_to_celsius(df.loc[i, 'score'])
 
-        Helpers.save_data(save, df, path=os.path.join(folders.processed, 'pdp1_vitals_v1.csv'))
+        df.to_csv(os.path.join(folder, filename), index=False)
         return df
 
+    @staticmethod
+    def merge_5dasc_df(df, df_5dasc, folder=folders.processed, filename='pdp1_master_w5DASC_v1.csv'):
+
+        for measure, pID in product(df_5dasc.measure.unique(), df.pID.unique()):
+
+            tmp = df_5dasc[(df_5dasc['pID']==pID) & (df_5dasc['measure']==measure)]
+            assert tmp.shape==(2,4)
+            pID_mean = round(tmp.score.mean(), 2)
+            df.loc[df['pID']==pID, measure] =  pID_mean
+
+        df.to_csv(os.path.join(folder, filename), index=False)
+        return df
 
 
 class Core():
 
     @staticmethod
-    def format_clinical_data(save):
+    def format_clinical_data(folder=folders.processed, filename='pdp1_clinical_v1.csv'):
 
         df = pd.read_csv(
             os.path.join(
@@ -281,11 +281,11 @@ class Core():
 
         df['test'] = df['measure']
         df = Helpers.standardize_df(df)
-        Helpers.save_data(save, df, path=os.path.join(folders.processed, 'pdp1_clinical_v1.csv'))
+        df.to_csv(os.path.join(folder, filename), index=False)
         return df
 
     @staticmethod
-    def format_CANTAB_data(save):
+    def format_CANTAB_data(folder=folders.processed, filename='pdp1_cantab_v1.csv'):
 
         df = pd.read_csv(os.path.join(
             folders.raw,
@@ -318,11 +318,11 @@ class Core():
         df['test'] = df.apply(Helpers.get_test, axis=1)
 
         df = Helpers.standardize_df(df)
-        Helpers.save_data(save, df, path=os.path.join(folders.processed, 'pdp1_cantab_v1.csv'))
+        df.to_csv(os.path.join(folder, filename), index=False)
         return df
 
     @staticmethod
-    def format_PRL_data(save):
+    def format_PRL_data(folder=folders.processed, filename='pdp1_prl_v1.csv'):
 
         df_index = pd.read_csv(os.path.join(
             folders.raw,
@@ -349,11 +349,11 @@ class Core():
         df['tp'] = df['tp'].replace('Screening', 'bsl', regex=True)
 
         df = Helpers.standardize_df(df)
-        Helpers.save_data(save, df, path=os.path.join(folders.processed, 'pdp1_prl_v1.csv'))
+        df.to_csv(os.path.join(folder, filename), index=False)
         return df
 
     @staticmethod
-    def format_demographic_data(save):
+    def format_demographic_data(folder=folders.processed, filename='pdp1_demography_v1.csv'):
 
         df = pd.read_csv(os.path.join(
             folders.raw,
@@ -389,12 +389,11 @@ class Core():
         df_led['pID'] = df_led['pID'].astype(int)
 
         df = pd.merge(df, df_led, on='pID', how='inner')
-
-        Helpers.save_data(save, df, path=os.path.join(folders.processed, 'pdp1_demography_v1.csv'))
+        df.to_csv(os.path.join(folder, filename), index=False)
         return df
 
     @staticmethod
-    def format_UPDRS_data(save):
+    def format_UPDRS_data(folder=folders.processed, filename='pdp1_updrs_v1.csv'):
 
         df = pd.read_csv(
             os.path.join(
@@ -516,7 +515,7 @@ class Core():
         df['test'] = 'UPDRS'
 
         df = Helpers.standardize_df(df)
-        Helpers.save_data(save, df, path=os.path.join(folders.processed, 'pdp1_updrs_v1.csv'))
+        df.to_csv(os.path.join(folder, filename), index=False)
         return df
 
 
@@ -551,14 +550,6 @@ class Helpers():
         df = df.sort_values(by=['pID', 'tp', 'measure'])
         df = df.drop_duplicates()
         return df
-
-    @staticmethod
-    def save_data(save, df, path):
-
-        if save is False:
-             return
-        else:
-            df.to_csv(path, index=False)
 
     @staticmethod
     def add_covariates(df_master, df_demo):
