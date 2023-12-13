@@ -39,7 +39,7 @@ class Controllers():
         df = pd.read_csv(
             os.path.join(
                 folders.raw,
-                'Clinical',
+                'REDCap export',
                 'PDP1-PDP1clinicalOutcomes_DATA_2023-Jul-17.csv'),
             dtype={'record_id': str})
 
@@ -119,7 +119,7 @@ class Controllers():
         df = pd.read_csv(
             os.path.join(
                 folders.raw,
-                'Clinical',
+                'REDCap export',
                 'PDP1-PDP1clinicalOutcomes_DATA_2023-Jul-17.csv'),
             dtype={'record_id': str})
 
@@ -215,7 +215,7 @@ class Core():
         df = pd.read_csv(
             os.path.join(
                 folders.raw,
-                'Clinical',
+                'REDCap export',
                 'PDP1-PDP1clinicalOutcomes_DATA_2023-Jul-17.csv'),
             dtype={'record_id': str})
 
@@ -389,7 +389,7 @@ class Core():
         df = pd.read_csv(
             os.path.join(
                 folders.raw,
-                'Clinical',
+                'REDCap export',
                 'PDP1-PDP1clinicalOutcomes_DATA_2023-Jul-17.csv'),
             dtype={'record_id': str})
 
