@@ -19,7 +19,7 @@ class DataWrangl():
         """
 
         Core.get_demographic_data()
-        Core.get_clinical_data()
+        Core.get_CLINIC_data()
         Core.get_CANTAB_data()
         Core.get_UPDRS_data()
         Core.get_PRL_data()
@@ -235,7 +235,7 @@ class Core():
         return df
 
     @staticmethod
-    def get_clinical_data(folder=folders.data, filename='pdp1_clinical.csv'):
+    def get_CLINIC_data(folder=folders.data, filename='pdp1_clinical.csv'):
 
         df = Helpers.get_REDCap_export()
 
@@ -498,6 +498,11 @@ class Core():
             for measure in config.cantab_measures[test]:
                 tmp[f'Z_{measure}'] = zscore(tmp[measure], nan_policy='omit')
                 del tmp[measure]
+
+                if measure in ['PALFAMS', 'OTSPSFC', 'MTSCFAPC']:
+                    # For these scales greater scores are better (lower is better for all others)
+                    # Flipping these scales so that improvement=lower scores for all scales
+                    tmp[f'Z_{measure}'] = (-1)*tmp[f'Z_{measure}'].copy()
 
             tmp[f'Z_{test}'] = round(tmp[tmp.filter(like='Z_').columns].mean(axis=1),3)
             tmp = tmp[['pID', 'tp', f'Z_{test}']]
