@@ -19,7 +19,7 @@ valid_str_pIDs=['1002','1020','1034','1047','1051','1055','1083','1085','1086','
 cantab_measures={
   'PAL': ['PALFAMS','PALTEA'], # Memory
   'RTI': ['RTIFMDMT','RTIFMDRT','RTISMDMT', 'RTISMDRT'],  # Attention & Psychomotor Speed
-  'MTS': ['MTSCFAPC','MTSCTAPC','MTSPS82','MTSRCAMD','MTSRFAMD'], # Attention & Psychomotor Speed
+  'MTS': ['MTSCFAPC', 'MTSPS82','MTSRCAMD','MTSRFAMD'], # Attention & Psychomotor Speed ('MTSCTAPC' removed as all values=100)
   'OTS': ['OTSMDLFC', 'OTSPSFC'], # Executive Function
   'SWM': ['SWMBE12','SWMBE4','SWMBE468','SWMBE6','SWMBE8','SWMS'], # Executive Function
 }

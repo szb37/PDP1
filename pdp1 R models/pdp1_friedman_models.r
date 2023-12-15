@@ -4,8 +4,8 @@ library(dplyr)
 library(PMCMRplus)
 library(here)
 
-source(paste(here(),'/pdp1 R models/load_pdp1.r', sep=''))
-df <- load_pdp1()
+source(paste(here(),'/pdp1 R models/pdp1_helpers.r', sep=''))
+df <- load_pdp1_data()
 
 ### Initalize outputs
 column_names <- c("measure", "stat", "p.value")
@@ -48,7 +48,9 @@ for (this_measure in unique(df$measure)) {
     tmp <- tmp[tmp$pID!=1051,] 
     tmp <- tmp[tmp$pID!=1055,] 
     tmp <- tmp[tmp$pID!=1142,] 
-    }
+  }
+  else if (this_measure=='NPIQ_DIS') {}
+  else if (this_measure=='NPIQ_SEV') {}
   
   ### Get omnibus test results
   friedman <- friedman.test(score ~ tp|pID, tmp)

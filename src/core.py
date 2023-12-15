@@ -194,6 +194,7 @@ class Core():
             value_name='score',
             ignore_index=True)
 
+        df = df.loc[(df.tp.isin(['bsl', 'A7', 'B7', 'B30']))]
         df['test']='NPIQ'
 
         df = Helpers.standardize_df(df)
@@ -270,7 +271,6 @@ class Core():
             'ccfq_bl_total': 'CCFQ'})
 
         df['test'] = df['measure']
-        df = df[df['measure']!='MTSCTAPC'] # Failed measure, all values=100
         df = Helpers.standardize_df(df)
         df.to_csv(os.path.join(folder, filename), index=False)
         return df
@@ -290,6 +290,7 @@ class Core():
             'Measure Code': 'measure'})
 
         df = df[['pID', 'tp', 'measure', 'score']]
+        df = df[df['measure']!='MTSCTAPC'] # Failed measure, all values=100
 
         df['pID'] = df['pID'].str[6:]
         df['pID'] = df['pID'].astype(int)
