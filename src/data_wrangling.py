@@ -16,12 +16,13 @@ class Controllers():
         """ Creates and saves master DF from raw input data
         """
 
-        Core.format_demographic_data()
-        Core.format_clinical_data()
-        Core.format_CANTAB_data()
-        Core.format_UPDRS_data()
-        Core.format_PRL_data()
-        Core.format_NPIQ_data()
+        #Core.format_demographic_data()
+        #Core.format_clinical_data()
+        #Core.format_CANTAB_data()
+        #Core.format_UPDRS_data()
+        #Core.format_PRL_data()
+        #Core.format_NPIQ_data()
+        Core.format_PHQ_data()
 
         df_clinical = pd.read_csv(os.path.join(folders.data, 'pdp1_clinical.csv'))
         df_cantab = pd.read_csv(os.path.join(folders.data, 'pdp1_cantab.csv'))
@@ -29,7 +30,8 @@ class Controllers():
         df_prl = pd.read_csv(os.path.join(folders.data, 'pdp1_prl.csv'))
         df_npiq = pd.read_csv(os.path.join(folders.data, 'pdp1_npiq.csv'))
 
-        df_master = pd.concat([df_cantab, df_clinical, df_prl, df_updrs, df_npiq], ignore_index=True)
+        df_master = pd.concat(
+            [df_cantab, df_clinical, df_prl, df_updrs, df_npiq], ignore_index=True)
         df_master['pID'] = df_master['pID'].astype(int)
         df_master = df_master.reset_index(drop=True)
 
@@ -244,6 +246,64 @@ class Core():
             ignore_index=True)
 
         df['test']='NPIQ'
+
+        df = Helpers.standardize_df(df)
+        df.to_csv(os.path.join(folder, filename), index=False)
+        return df
+
+    @staticmethod
+    def format_PHQ_data(folder=folders.data, filename='pdp1_phq.csv'):
+
+        df = pd.read_csv(
+            os.path.join(
+                folders.raw,
+                'REDCap export',
+                'PDP1-PDP1clinicalOutcomes_DATA_2023-Jul-17.csv'),
+            dtype={'record_id': str})
+
+        df = df.loc[(df.record_id.isin(config.valid_str_pIDs))]
+        df['record_id'] = df['record_id'].astype(int)
+
+        df = df.replace({
+            "screening_baseline_arm_1": "bsl",
+            "day_a0_dose_1_arm_1": "A0",
+            "day_a1_arm_1": "A1",
+            "day_a7_arm_1": "A7",
+            "day_b0_dose_2_arm_1": "B0",
+            "day_b1_arm_1": "B1",
+            "day_b7_arm_1": "B7",
+            "day_b11_arm_1": "B11",
+            "day_ab25_arm_1": "B25",
+            "day_ab30_arm_1": "B30",
+            "day_ab90_phone_arm_1": "B90"}, regex=True,)
+
+        df = df.rename(columns={
+            'record_id': 'pID',
+            'redcap_event_name': 'tp',})
+
+        freq = [f'psychq_{n}' for n in range(1,14)]
+        severity = [f'psychq_{n}a' for n in range(1,14)]
+
+        keep_cols = ['pID', 'tp'] + freq + severity
+        df = df[keep_cols]
+
+        df = df.dropna(subset=freq, how='all')
+        df[severity] = df[severity].replace(np.nan, 0)
+
+        for idx, row in df.iterrows():
+            df.loc[idx, 'PHQ'] = sum([row[i]*row[j]  for i,j in zip(freq, severity)])
+
+        df = df[['pID', 'tp', 'PHQ']]
+
+        df = pd.melt(
+            df,
+            id_vars= ['pID', 'tp'],
+            value_vars=['PHQ'],
+            var_name='measure',
+            value_name='score',
+            ignore_index=True)
+
+        df['test']='PHQ'
 
         df = Helpers.standardize_df(df)
         df.to_csv(os.path.join(folder, filename), index=False)
