@@ -21,13 +21,15 @@ class Controllers():
         Core.format_CANTAB_data()
         Core.format_UPDRS_data()
         Core.format_PRL_data()
+        Core.format_NPIQ_data()
 
         df_clinical = pd.read_csv(os.path.join(folders.data, 'pdp1_clinical.csv'))
         df_cantab = pd.read_csv(os.path.join(folders.data, 'pdp1_cantab.csv'))
         df_updrs = pd.read_csv(os.path.join(folders.data, 'pdp1_updrs.csv'))
         df_prl = pd.read_csv(os.path.join(folders.data, 'pdp1_prl.csv'))
+        df_npiq = pd.read_csv(os.path.join(folders.data, 'pdp1_npiq.csv'))
 
-        df_master = pd.concat([df_cantab, df_clinical, df_prl, df_updrs], ignore_index=True)
+        df_master = pd.concat([df_cantab, df_clinical, df_prl, df_updrs, df_npiq], ignore_index=True)
         df_master['pID'] = df_master['pID'].astype(int)
         df_master = df_master.reset_index(drop=True)
 
@@ -211,6 +213,43 @@ class Controllers():
 class Core():
 
     @staticmethod
+    def format_NPIQ_data(folder=folders.data, filename='pdp1_npiq.csv'):
+
+        df = pd.read_csv(
+            os.path.join(
+                folders.raw,
+                'npiq_raana.csv'),
+            dtype={'record_id': str})
+
+        df = df.loc[(df.record_id.isin(config.valid_str_pIDs))]
+        df['record_id'] = df['record_id'].astype(int)
+
+        df = df.rename(columns={
+            'record_id': 'pID',
+            'redcap_event_name': 'tp',
+            'total_sev': 'NPIQ_SEV',
+            'total_dis': 'NPIQ_DIS'})
+
+        df = df.replace({
+            "Baseline": "bsl",}, regex=True,)
+
+        df = df[['pID', 'tp', 'NPIQ_SEV', 'NPIQ_DIS']]
+
+        df = pd.melt(
+            df,
+            id_vars= ['pID', 'tp'],
+            value_vars=['NPIQ_SEV', 'NPIQ_DIS'],
+            var_name='measure',
+            value_name='score',
+            ignore_index=True)
+
+        df['test']='NPIQ'
+
+        df = Helpers.standardize_df(df)
+        df.to_csv(os.path.join(folder, filename), index=False)
+        return df
+
+    @staticmethod
     def format_clinical_data(folder=folders.data, filename='pdp1_clinical.csv'):
 
         df = pd.read_csv(
@@ -251,8 +290,9 @@ class Core():
             (df.ccfq_bl_complete==2)]
 
         measures = ['cssrs', 'esaps', 'madrs', 'hama', 'ccfq', 'ccfq_bl']
-        keep_columns = ['tp', 'pID'] + [f'{measure}_total' for measure in measures]
-        df = df[keep_columns]
+        keep_cols = [f'{measure}_total' for measure in measures]
+        keep_cols = keep_cols + ['tp', 'pID']
+        df = df[keep_cols]
 
         df = pd.melt(
             df,
@@ -336,7 +376,6 @@ class Core():
             df = pd.concat([df, tmp])
 
         return df
-
 
     @staticmethod
     def format_PRL_data(folder=folders.data, filename='pdp1_prl.csv'):

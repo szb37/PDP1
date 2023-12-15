@@ -86,9 +86,7 @@ if False: # make delta max
 
     analysis.Controllers.delta_max_vitals(
         df=pd.read_csv(
-            os.path.join(folders.data, 'pdp1_vitals.csv')),
-    )
-
+            os.path.join(folders.data, 'pdp1_vitals.csv')),)
 
     analysis.Controllers.delta_max_5DASC(
         df=pd.read_csv(
