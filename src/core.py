@@ -1,28 +1,30 @@
+from scipy.stats import ttest_rel
+from scipy.stats import zscore
 from itertools import product
 import src.folders as folders
 import src.config as config
-from scipy.stats import zscore
 import pandas as pd
 import numpy as np
 import datetime
+import math
 import copy
 import os
 
 
-class Controllers():
+class DataWrangl():
 
     @staticmethod
     def get_master_df(folder=folders.data, filename='pdp1_MASTER.csv'):
         """ Creates and saves master DF from raw input data
         """
 
-        Core.format_demographic_data()
-        Core.format_clinical_data()
-        Core.format_CANTAB_data()
-        Core.format_UPDRS_data()
-        Core.format_PRL_data()
-        Core.format_NPIQ_data()
-        Core.format_PHQ_data()
+        Core.get_demographic_data()
+        Core.get_clinical_data()
+        Core.get_CANTAB_data()
+        Core.get_UPDRS_data()
+        Core.get_PRL_data()
+        Core.get_NPIQ_data()
+        Core.get_PHQ_data()
 
         df_clinical = pd.read_csv(os.path.join(folders.data, 'pdp1_clinical.csv'))
         df_cantab = pd.read_csv(os.path.join(folders.data, 'pdp1_cantab.csv'))
@@ -41,31 +43,7 @@ class Controllers():
     @staticmethod
     def get_5dasc_df(folder=folders.data, filename='pdp1_5dasc.csv'):
 
-        df = pd.read_csv(
-            os.path.join(
-                folders.raw,
-                'REDCap export',
-                'PDP1-PDP1clinicalOutcomes_DATA_2023-Jul-17.csv'),
-            dtype={'record_id': str})
-
-        df = df.loc[(df.record_id.isin(config.valid_str_pIDs))]
-        df['record_id'] = df['record_id'].astype(int)
-        df = df.rename(columns={
-            'record_id': 'pID',
-            'redcap_event_name': 'tp'})
-
-        df = df.replace({
-            "screening_baseline_arm_1": "bsl",
-            "day_a0_dose_1_arm_1": "A0",
-            "day_a1_arm_1": "A1",
-            "day_a7_arm_1": "A7",
-            "day_b0_dose_2_arm_1": "B0",
-            "day_b1_arm_1": "B1",
-            "day_b7_arm_1": "B7",
-            "day_b11_arm_1": "B11",
-            "day_ab25_arm_1": "B25",
-            "day_ab30_arm_1": "B30",
-            "day_ab90_phone_arm_1": "B90"}, regex=True,)
+        df = Helpers.get_REDCap_export()
 
         boundless_items = [
             "fivedasc_util_total",
@@ -121,39 +99,10 @@ class Controllers():
     @staticmethod
     def get_vitals_df(folder=folders.data, filename='pdp1_vitals.csv'):
 
-        df = pd.read_csv(
-            os.path.join(
-                folders.raw,
-                'REDCap export',
-                'PDP1-PDP1clinicalOutcomes_DATA_2023-Jul-17.csv'),
-            dtype={'record_id': str})
-
-        df = df.loc[(df.record_id.isin(config.valid_str_pIDs))]
-        df['record_id'] = df['record_id'].astype(int)
-        df = df.rename(columns={
-            'record_id': 'pID',
-            'redcap_event_name': 'tp'})
-
-        df = df.replace({
-            "screening_baseline_arm_1": "bsl",
-            "day_a0_dose_1_arm_1": "A0",
-            "day_a1_arm_1": "A1",
-            "day_a7_arm_1": "A7",
-            "day_b0_dose_2_arm_1": "B0",
-            "day_b1_arm_1": "B1",
-            "day_b7_arm_1": "B7",
-            "day_b11_arm_1": "B11",
-            "day_ab25_arm_1": "B25",
-            "day_ab30_arm_1": "B30",
-            "day_ab90_phone_arm_1": "B90"}, regex=True,)
-
+        df = Helpers.get_REDCap_export()
 
         cols = [col for col in df if (col.startswith('vs_bl')) | (col.startswith('vs_dose')) | (col.startswith('vs_ortho')) ]
         df = df[ ['pID','tp'] + cols]
-
-        # only keep rows where we collected vital signs of interest
-        #i = ( redcapCompletersDf['redcap_event_name'] == 'A0' ) | ( redcapCompletersDf['redcap_event_name'] == 'B0' )
-        #vitalDf = vitalDf[i]
 
         df = df.loc[(df.tp.isin(['A0','B0']))]
         df = df.rename(columns={
@@ -215,7 +164,7 @@ class Controllers():
 class Core():
 
     @staticmethod
-    def format_NPIQ_data(folder=folders.data, filename='pdp1_npiq.csv'):
+    def get_NPIQ_data(folder=folders.data, filename='pdp1_npiq.csv'):
 
         df = pd.read_csv(
             os.path.join(
@@ -252,34 +201,9 @@ class Core():
         return df
 
     @staticmethod
-    def format_PHQ_data(folder=folders.data, filename='pdp1_phq.csv'):
+    def get_PHQ_data(folder=folders.data, filename='pdp1_phq.csv'):
 
-        df = pd.read_csv(
-            os.path.join(
-                folders.raw,
-                'REDCap export',
-                'PDP1-PDP1clinicalOutcomes_DATA_2023-Jul-17.csv'),
-            dtype={'record_id': str})
-
-        df = df.loc[(df.record_id.isin(config.valid_str_pIDs))]
-        df['record_id'] = df['record_id'].astype(int)
-
-        df = df.replace({
-            "screening_baseline_arm_1": "bsl",
-            "day_a0_dose_1_arm_1": "A0",
-            "day_a1_arm_1": "A1",
-            "day_a7_arm_1": "A7",
-            "day_b0_dose_2_arm_1": "B0",
-            "day_b1_arm_1": "B1",
-            "day_b7_arm_1": "B7",
-            "day_b11_arm_1": "B11",
-            "day_ab25_arm_1": "B25",
-            "day_ab30_arm_1": "B30",
-            "day_ab90_phone_arm_1": "B90"}, regex=True,)
-
-        df = df.rename(columns={
-            'record_id': 'pID',
-            'redcap_event_name': 'tp',})
+        df = Helpers.get_REDCap_export()
 
         freq = [f'psychq_{n}' for n in range(1,14)]
         severity = [f'psychq_{n}a' for n in range(1,14)]
@@ -310,34 +234,9 @@ class Core():
         return df
 
     @staticmethod
-    def format_clinical_data(folder=folders.data, filename='pdp1_clinical.csv'):
+    def get_clinical_data(folder=folders.data, filename='pdp1_clinical.csv'):
 
-        df = pd.read_csv(
-            os.path.join(
-                folders.raw,
-                'REDCap export',
-                'PDP1-PDP1clinicalOutcomes_DATA_2023-Jul-17.csv'),
-            dtype={'record_id': str})
-
-        df = df.loc[(df.record_id.isin(config.valid_str_pIDs))]
-        df['record_id'] = df['record_id'].astype(int)
-
-        df = df.rename(columns={
-            'record_id': 'pID',
-            'redcap_event_name': 'tp'})
-
-        df = df.replace({
-            "screening_baseline_arm_1": "bsl",
-            "day_a0_dose_1_arm_1": "A0",
-            "day_a1_arm_1": "A1",
-            "day_a7_arm_1": "A7",
-            "day_b0_dose_2_arm_1": "B0",
-            "day_b1_arm_1": "B1",
-            "day_b7_arm_1": "B7",
-            "day_b11_arm_1": "B11",
-            "day_ab25_arm_1": "B25",
-            "day_ab30_arm_1": "B30",
-            "day_ab90_phone_arm_1": "B90"}, regex=True,)
+        df = Helpers.get_REDCap_export()
 
         df = df.loc[(df.tp.isin(['bsl', 'A7', 'B7', 'B30']))]
 
@@ -377,7 +276,7 @@ class Core():
         return df
 
     @staticmethod
-    def format_CANTAB_data(add_z=True, folder=folders.data, filename='pdp1_cantab.csv'):
+    def get_CANTAB_data(add_z=True, folder=folders.data, filename='pdp1_cantab.csv'):
 
         df = pd.read_csv(os.path.join(
             folders.raw,
@@ -411,34 +310,7 @@ class Core():
         return df
 
     @staticmethod
-    def add_CANTAB_meanZ(df):
-        """ Calculates z-score for each CANTAB outcome and then calculates
-            mean z-score across measures for each test.
-            This mean z-score across the test's measures is saved as Z_{test name}
-        """
-
-        for test in config.cantab_measures.keys():
-            tmp = df[df['measure'].isin(config.cantab_measures[test])].copy()
-            tmp = pd.pivot_table(tmp, index=['tp','pID'], columns='measure', values= 'score')
-            tmp.columns.name = None
-            tmp = tmp.reset_index()
-
-            for measure in config.cantab_measures[test]:
-                tmp[f'Z_{measure}'] = zscore(tmp[measure], nan_policy='omit')
-                del tmp[measure]
-
-            tmp[f'Z_{test}'] = round(tmp[tmp.filter(like='Z_').columns].mean(axis=1),3)
-            tmp = tmp[['pID', 'tp', f'Z_{test}']]
-            tmp['measure'] = f'Z_{test}'
-            tmp['test'] = f'Z_{test}'
-            tmp = tmp.rename(columns={f'Z_{test}': 'score'})
-
-            df = pd.concat([df, tmp])
-
-        return df
-
-    @staticmethod
-    def format_PRL_data(folder=folders.data, filename='pdp1_prl.csv'):
+    def get_PRL_data(folder=folders.data, filename='pdp1_prl.csv'):
 
         df_index = pd.read_csv(os.path.join(
             folders.raw,
@@ -469,7 +341,7 @@ class Core():
         return df
 
     @staticmethod
-    def format_demographic_data(folder=folders.data, filename='pdp1_demography.csv'):
+    def get_demographic_data(folder=folders.data, filename='pdp1_demography.csv'):
 
         df = pd.read_csv(os.path.join(
             folders.raw,
@@ -509,34 +381,9 @@ class Core():
         return df
 
     @staticmethod
-    def format_UPDRS_data(folder=folders.data, filename='pdp1_updrs.csv'):
+    def get_UPDRS_data(folder=folders.data, filename='pdp1_updrs.csv'):
 
-        df = pd.read_csv(
-            os.path.join(
-                folders.raw,
-                'REDCap export',
-                'PDP1-PDP1clinicalOutcomes_DATA_2023-Jul-17.csv'),
-            dtype={'record_id': str})
-
-        df = df.loc[(df.record_id.isin(config.valid_str_pIDs))]
-        df['record_id'] = df['record_id'].astype(int)
-
-        df = df.rename(columns={
-          'record_id': 'pID',
-          'redcap_event_name': 'tp'})
-
-        df = df.replace({
-          "screening_baseline_arm_1": "bsl",
-          "day_a0_dose_1_arm_1": "A0",
-          "day_a1_arm_1": "A1",
-          "day_a7_arm_1": "A7",
-          "day_b0_dose_2_arm_1": "B0",
-          "day_b1_arm_1": "B1",
-          "day_b7_arm_1": "B7",
-          "day_b11_arm_1": "B11",
-          "day_ab25_arm_1": "B25",
-          "day_ab30_arm_1": "B30",
-          "day_ab90_phone_arm_1": "B90"}, regex=True,)
+        df = Helpers.get_REDCap_export()
 
         del_idx = df.loc[
             (df.redcap_repeat_instrument=='mdsupdrs') &
@@ -635,6 +482,33 @@ class Core():
         return df
 
     @staticmethod
+    def add_CANTAB_meanZ(df):
+        """ Calculates z-score for each CANTAB outcome and then calculates
+            mean z-score across measures for each test.
+            This mean z-score across the test's measures is saved as Z_{test name}
+        """
+
+        for test in config.cantab_measures.keys():
+            tmp = df[df['measure'].isin(config.cantab_measures[test])].copy()
+            tmp = pd.pivot_table(tmp, index=['tp','pID'], columns='measure', values= 'score')
+            tmp.columns.name = None
+            tmp = tmp.reset_index()
+
+            for measure in config.cantab_measures[test]:
+                tmp[f'Z_{measure}'] = zscore(tmp[measure], nan_policy='omit')
+                del tmp[measure]
+
+            tmp[f'Z_{test}'] = round(tmp[tmp.filter(like='Z_').columns].mean(axis=1),3)
+            tmp = tmp[['pID', 'tp', f'Z_{test}']]
+            tmp['measure'] = f'Z_{test}'
+            tmp['test'] = f'Z_{test}'
+            tmp = tmp.rename(columns={f'Z_{test}': 'score'})
+
+            df = pd.concat([df, tmp])
+
+        return df
+
+    @staticmethod
     def add_demographic_covariates(df, df_demo):
 
         ### Add variables from df_demo
@@ -698,6 +572,58 @@ class Core():
         return df
 
 
+class Analysis():
+
+    @staticmethod
+    def delta_max_5DASC(df):
+
+        print('delta_max_5DASC results:')
+
+        for measure in df.measure.unique():
+            a0s = df.loc[(df.measure==measure) & (df.tp=='A0')].sort_values(by='pID')
+            b0s = df.loc[(df.measure==measure) & (df.tp=='B0')].sort_values(by='pID')
+
+            if not (np.array_equal(a0s.pID, b0s.pID)):
+                print(f'Unequal pID arrays: {measure}')
+                continue
+
+            t, p = ttest_rel(a0s.score, b0s.score)
+            sig=''
+            if p<0.05:
+                sig='*'
+
+            print(f'{measure}: t={round(t,2)} p={round(p,3)} {sig}')
+
+    @staticmethod
+    def delta_max_vitals(df):
+
+        print('delta_max_vitals results:')
+        for measure in df.measure.unique():
+            a0_deltamaxs=[]
+            b0_deltamaxs=[]
+
+            # Extract delta max for each participant
+            for pID in df.pID.unique():
+                a0_delta_max = Helpers.find_delta_max(df[(df['measure']==measure) & (df['pID']==pID) & (df['tp']=='A0')])
+                b0_delta_max = Helpers.find_delta_max(df[(df['measure']==measure) & (df['pID']==pID) & (df['tp']=='B0')])
+
+                if math.isnan(a0_delta_max) or math.isnan(b0_delta_max):
+                    print(f'Failed to find max delta; measure:{measure}, pID:{pID}')
+                    continue
+
+                a0_deltamaxs.append(a0_delta_max)
+                b0_deltamaxs.append(b0_delta_max)
+
+            # Do paired t-test of delta maxes
+            t, p = ttest_rel(a0_deltamaxs, b0_deltamaxs)
+
+            sig=''
+            if p<0.05:
+                sig='*'
+
+            print(f'{measure}: t={round(t,2)} p={round(p,3)} {sig}')
+
+
 class Helpers():
 
     @staticmethod
@@ -733,3 +659,66 @@ class Helpers():
     @staticmethod
     def fahrenheit_to_celsius(temp_f):
         return round((temp_f-32)*5/9,2)
+
+    @staticmethod
+    def find_delta_max(df):
+
+        df = df.reset_index()
+        assert len(df[(df['time']==0)].index)==1
+        t0_row_idx = df[(df['time']==0)].index[0]
+        score_col_idx = df.columns.get_loc('score')
+        t0_value = df.iloc[t0_row_idx, score_col_idx]
+
+        idx_max=t0_row_idx
+        delta_max=math.nan
+
+        for idx in df.index:
+            delta = abs(df.iloc[idx, score_col_idx]-t0_value)
+
+            if (delta>delta_max) or math.isnan(delta_max):
+                idx_max = idx
+                delta_max = delta
+
+        return round((df.iloc[idx_max, score_col_idx]-t0_value),3)
+
+    @staticmethod
+    def get_REDCap_export():
+
+        df = pd.read_csv(
+            os.path.join(
+                folders.raw,
+                'REDCap export',
+                'PDP1-PDP1clinicalOutcomes_DATA_2023-Jul-17.csv'),
+            dtype={
+                'record_id': str,
+                'vs_notes': str,
+                'vs_dose30_time2': str,
+                'vs_dose240_time2': str,
+                'vs_ortho2_hr_std3': str,
+                'vs_extra_measures': str,
+                'ccfq_ra_check_bl': str,
+                'npid_ra_check_bl': str,
+                'npid_ra_check': str,})
+
+        df = df.loc[(df.record_id.isin(config.valid_str_pIDs))]
+        df['record_id'] = df['record_id'].astype(int)
+
+        df = df.rename(columns={
+            'record_id': 'pID',
+            'redcap_event_name': 'tp'})
+
+        df = df.replace({
+            "screening_baseline_arm_1": "bsl",
+            "day_a0_dose_1_arm_1": "A0",
+            "day_a1_arm_1": "A1",
+            "day_a7_arm_1": "A7",
+            "day_b0_dose_2_arm_1": "B0",
+            "day_b1_arm_1": "B1",
+            "day_b7_arm_1": "B7",
+            "day_b11_arm_1": "B11",
+            "day_ab18_arm_1": "B18",
+            "day_ab25_arm_1": "B25",
+            "day_ab30_arm_1": "B30",
+            "day_ab90_phone_arm_1": "B90"}, regex=True,)
+
+        return df

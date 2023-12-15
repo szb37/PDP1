@@ -3,27 +3,26 @@ To reproduce findings:
     - run from the included conda environment
     - run from codebase folder
 """
-import src.data_wrangling as data
-import src.analysis as analysis
 import src.folders as folders
 import src.config as config
 import src.plots as plots
+import src.core as core
 import pandas as pd
 import os
 
 
 """ process data """
 if True: # create master DF from raw data files
-    df = data.Controllers.get_master_df()
+    df = core.DataWrangl.get_master_df()
 
-if False: # create 5DASC DF from raw data files
-    df_5d = data.Controllers.get_5dasc_df()
+if True: # create 5DASC DF from raw data files
+    df_5d = core.DataWrangl.get_5dasc_df()
 
-if False: # create vitals DF from raw data files
-    df_vitals = data.Controllers.get_vitals_df()
+if True: # create vitals DF from raw data files
+    df_vitals = core.DataWrangl.get_vitals_df()
 
-if False: # create master DF with all potential bsl covariates
-    df = data.Controllers.get_covariates_master_df(
+if True: # create master DF with all potential bsl covariates
+    df = core.DataWrangl.get_covariates_master_df(
         df = pd.read_csv(
             os.path.join(folders.data, 'pdp1_MASTER.csv')),
         df_5dasc = pd.read_csv(
@@ -33,7 +32,8 @@ if False: # create master DF with all potential bsl covariates
 
 
 """ plots """
-if False: # make vitals
+if True: # make vitals
+
     plots.Controllers.make_vitals(
         df=pd.read_csv(
             os.path.join(folders.data, 'pdp1_vitals.csv')),
@@ -54,12 +54,13 @@ if False: # make vitals
             os.path.join(folders.data, 'pdp1_vitals.csv')),
         y='dia',)
 
-if False: # make histograms
+if True: # make histograms
+
     plots.Controllers.make_histograms(
         df=pd.read_csv(
             os.path.join(folders.data, 'pdp1_MASTER.csv')))
 
-if False: # make agg/ind time evolution plots
+if True: # make agg/ind time evolution plots
 
     plots.Controllers.make_ind_timeevols(
         df=pd.read_csv(
@@ -82,12 +83,12 @@ if False: # make agg/ind time evolution plots
 
 
 """ analysis """
-if False: # make delta max
+if True: # make delta max
 
-    analysis.Controllers.delta_max_vitals(
+    core.Analysis.delta_max_vitals(
         df=pd.read_csv(
             os.path.join(folders.data, 'pdp1_vitals.csv')),)
 
-    analysis.Controllers.delta_max_5DASC(
+    core.Analysis.delta_max_5DASC(
         df=pd.read_csv(
             os.path.join(folders.data, 'pdp1_5dasc.csv')),)
