@@ -16,12 +16,12 @@ class Controllers():
         """ Creates and saves master DF from raw input data
         """
 
-        #Core.format_demographic_data()
-        #Core.format_clinical_data()
-        #Core.format_CANTAB_data()
-        #Core.format_UPDRS_data()
-        #Core.format_PRL_data()
-        #Core.format_NPIQ_data()
+        Core.format_demographic_data()
+        Core.format_clinical_data()
+        Core.format_CANTAB_data()
+        Core.format_UPDRS_data()
+        Core.format_PRL_data()
+        Core.format_NPIQ_data()
         Core.format_PHQ_data()
 
         df_clinical = pd.read_csv(os.path.join(folders.data, 'pdp1_clinical.csv'))
