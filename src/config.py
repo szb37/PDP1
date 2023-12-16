@@ -2,6 +2,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 sns.set_style("whitegrid")
+#sns.set_style("ticks")
+
 sns.color_palette("colorblind")
 sns.despine()
 

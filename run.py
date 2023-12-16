@@ -12,16 +12,16 @@ import os
 
 
 """ process data """
-if True: # create master DF from raw data files
+if False: # create master DF from raw data files
     df = core.DataWrangl.get_master_df()
 
-if True: # create 5DASC DF from raw data files
+if False: # create 5DASC DF from raw data files
     df_5d = core.DataWrangl.get_5dasc_df()
 
-if True: # create vitals DF from raw data files
+if False: # create vitals DF from raw data files
     df_vitals = core.DataWrangl.get_vitals_df()
 
-if True: # create master DF with all potential bsl covariates
+if False: # create master DF with all potential bsl covariates
     df = core.DataWrangl.get_covariates_master_df(
         df = pd.read_csv(
             os.path.join(folders.data, 'pdp1_MASTER.csv')),
@@ -60,7 +60,7 @@ if False: # make histograms
         df=pd.read_csv(
             os.path.join(folders.data, 'pdp1_MASTER.csv')))
 
-if True: # make agg/ind time evolution plots
+if False: # make agg/ind time evolution plots
 
     plots.Controllers.make_ind_timeevols(
         df=pd.read_csv(
@@ -70,9 +70,9 @@ if True: # make agg/ind time evolution plots
     plots.Controllers.make_agg_timeevols(
         df=pd.read_csv(
             os.path.join(folders.data, 'pdp1_MASTER.csv')),
-            errorbar_corr=True,
-            boost_y=False,
-            out_dir=folders.agg_timeevols)
+            errorbar_corr = True,
+            boost_y = False,
+            out_dir = folders.agg_timeevols)
 
     plots.Controllers.make_agg_timeevols(
         df=pd.read_csv(
@@ -83,7 +83,7 @@ if True: # make agg/ind time evolution plots
 
 
 """ analysis """
-if True: # make delta max
+if False: # make delta max
 
     core.Analysis.delta_max_vitals(
         df=pd.read_csv(

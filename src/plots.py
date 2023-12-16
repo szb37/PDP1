@@ -69,6 +69,7 @@ class Controllers():
             sns.lineplot(
                 x='tp', y='score', data=tmp_df,
                 marker='o', markersize=12,
+                color = '#F71480',
                 err_style="bars", errorbar="ci", err_kws={'capsize':4, 'elinewidth': 1.5, 'capthick': 1.5})
 
             ax.xaxis.grid(False)
@@ -83,6 +84,7 @@ class Controllers():
             ax.set_ylabel('Score', fontdict=config.axislabel_fontdict)
             ax.tick_params(axis='both', which='major', labelsize=config.ticklabel_fontsize)
             ax.set_title(measure, fontdict=config.title_fontdict)
+            sns.despine(top=True, right=True, left=True, bottom=True)
 
             Helpers.save_fig(
                 fig = fig,
@@ -125,6 +127,8 @@ class Controllers():
             ax.tick_params(axis='both', which='major', labelsize=config.ticklabel_fontsize)
             ax.set_title(measure, fontdict=config.title_fontdict)
 
+            sns.despine(top=True, right=True, left=True, bottom=True)
+
             Helpers.save_fig(
                 fig = fig,
                 out_dir = out_dir,
@@ -148,15 +152,17 @@ class Controllers():
             x = 'time',
             y = 'score',
             hue = 'tp',
-            errorbar = ("se"),
+            errorbar = "ci",
             err_style = "bars",
-            err_kws={"capsize": 5, "elinewidth": 1.5},
-            style="tp",
-            markers=["D", "D"],
-            markersize=10,
-            dashes=False,
-            legend=False,
-            palette = 'deep'
+            err_kws = {"capsize": 5, "elinewidth": 1.5},
+            style = "tp",
+            markers = ["o", "D"],
+            palette = {
+                'A0': '#56A0FB',
+                'B0': '#F71480'},
+            markersize = 10,
+            #dashes = False,
+            legend = True,
         )
 
         ax.set_xticks([0, 30, 60, 90, 120, 240, 360, 420])
@@ -182,6 +188,8 @@ class Controllers():
                 fontdict=config.axislabel_fontdict)
         else:
             assert False
+
+        sns.despine(top=True, right=True, left=True, bottom=True)
 
         Helpers.save_fig(
             fig = fig,
