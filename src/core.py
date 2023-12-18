@@ -583,7 +583,7 @@ class Analysis():
     @staticmethod
     def delta_max_5DASC(df):
 
-        print('delta_max_5DASC results:')
+        print('*** Delta_max_5DASC results: ***')
 
         for measure in df.measure.unique():
             a0s = df.loc[(df.measure==measure) & (df.tp=='A0')].sort_values(by='pID')
@@ -603,7 +603,7 @@ class Analysis():
     @staticmethod
     def delta_max_vitals(df):
 
-        print('delta_max_vitals results:')
+        print('*** Delta_max_vitals results: ***')
         for measure in df.measure.unique():
             a0_deltamaxs=[]
             b0_deltamaxs=[]

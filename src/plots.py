@@ -135,67 +135,98 @@ class Controllers():
                 filename = f'pdp1_ind_timeevol_{measure}')
 
     @staticmethod
-    def make_vitals(df, y, errorbar_corr=True, out_dir=folders.vitals):
+    def make_vitals(df, errorbar_corr=True, out_dir=folders.vitals):
 
-        assert y in ['temp', 'dia', 'sys', 'hr']
+        for y in ['temp', 'dia', 'sys', 'hr']:
 
-        """ Plot temperature """
+            fig = plt.figure()
+            ax = fig.add_subplot(1, 1, 1)
+            tmp_df = df.loc[(df.measure==y)]
+
+            if errorbar_corr:
+                tmp_df = Helpers.get_errorbar_corr(tmp_df)
+
+            ax = sns.lineplot(
+                data = tmp_df,
+                x = 'time',
+                y = 'score',
+                hue = 'tp',
+                errorbar = "ci",
+                err_style = "bars",
+                err_kws = {"capsize": 5, "elinewidth": 1.5},
+                style = "tp",
+                markers = ["o", "D"],
+                palette = {
+                    'A0': '#56A0FB',
+                    'B0': '#F71480'},
+                markersize = 10,
+                #dashes = False,
+                legend = True,
+            )
+
+            ax.set_xticks([0, 30, 60, 90, 120, 240, 360, 420])
+            ax.set_xlabel('Time [min]', fontdict=config.axislabel_fontdict)
+            ax.tick_params(axis='both', which='major', labelsize=config.ticklabel_fontsize)
+            ax.xaxis.grid(False)
+
+            if y=='temp':
+                ax.set_ylabel(
+                    'Body temperature [°C]',
+                    fontdict=config.axislabel_fontdict)
+            elif y=='dia':
+                ax.set_ylabel(
+                    'Diastolic BP [mmHg]',
+                    fontdict=config.axislabel_fontdict)
+            elif y=='sys':
+                ax.set_ylabel(
+                    'Systolic BP [mmHg]',
+                    fontdict=config.axislabel_fontdict)
+            elif y=='hr':
+                ax.set_ylabel(
+                    'Heart rate [BPM]',
+                    fontdict=config.axislabel_fontdict)
+            else:
+                assert False
+
+            sns.despine(top=True, right=True, left=True, bottom=True)
+
+            Helpers.save_fig(
+                fig = fig,
+                out_dir = out_dir,
+                filename = f'vitals_{y}')
+
+    @staticmethod
+    def make_5dasc(df, out_dir=folders.exports):
+
+        df = df[df['measure'].str.contains('fivedasc_')]
+        tmp = df['measure'].copy()
+        tmp = tmp.str.replace('fivedasc_', '')
+        tmp = tmp.str.replace('_total', '')
+        df['measure'] = tmp
+
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1)
-        tmp_df = df.loc[(df.measure==y)]
+        fig.set_size_inches([4*4.8, 4.8])
 
-        if errorbar_corr:
-            tmp_df = Helpers.get_errorbar_corr(tmp_df)
-
-        ax = sns.lineplot(
-            data = tmp_df,
-            x = 'time',
-            y = 'score',
-            hue = 'tp',
-            errorbar = "ci",
-            err_style = "bars",
-            err_kws = {"capsize": 5, "elinewidth": 1.5},
-            style = "tp",
-            markers = ["o", "D"],
+        sns.boxplot(
+            data=df,
+            x='measure',
+            y='score',
+            hue='tp',
             palette = {
                 'A0': '#56A0FB',
-                'B0': '#F71480'},
-            markersize = 10,
-            #dashes = False,
-            legend = True,
-        )
+                'B0': '#F71480'},)
 
-        ax.set_xticks([0, 30, 60, 90, 120, 240, 360, 420])
-        ax.set_xlabel('Time [min]', fontdict=config.axislabel_fontdict)
+        #ax.set_xlabel(fontdict=config.axislabel_fontdict)
         ax.tick_params(axis='both', which='major', labelsize=config.ticklabel_fontsize)
         ax.xaxis.grid(False)
-
-        if y=='temp':
-            ax.set_ylabel(
-                'Body temperature [°C]',
-                fontdict=config.axislabel_fontdict)
-        elif y=='dia':
-            ax.set_ylabel(
-                'Diastolic BP [mmHg]',
-                fontdict=config.axislabel_fontdict)
-        elif y=='sys':
-            ax.set_ylabel(
-                'Systolic BP [mmHg]',
-                fontdict=config.axislabel_fontdict)
-        elif y=='hr':
-            ax.set_ylabel(
-                'Heart rate [BPM]',
-                fontdict=config.axislabel_fontdict)
-        else:
-            assert False
 
         sns.despine(top=True, right=True, left=True, bottom=True)
 
         Helpers.save_fig(
             fig = fig,
             out_dir = out_dir,
-            filename = f'vitals_{y}')
-
+            filename = '5dasc')
 
 class Helpers:
 
