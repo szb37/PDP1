@@ -4,6 +4,7 @@ import src.folders as folders
 import seaborn as sns
 import pandas as pd
 import numpy as np
+import math
 import os
 
 class Controllers():
@@ -50,13 +51,13 @@ class Controllers():
     def make_agg_timeevols(df, errorbar_corr=True, boost_y=True, out_dir=folders.agg_timeevols):
 
         for measure in df.measure.unique():
+
             print(f'Create AGG timeevol plot: {measure}; errorbar_corr: {errorbar_corr}, boost_y: {boost_y}')
 
             fig = plt.figure()
             ax = fig.add_subplot(1, 1, 1)
 
             tmp_df = df.loc[(df.measure==measure)].copy()
-            tps = tmp_df.tp.unique()
 
             tmp_df['tp'] = tmp_df['tp'].astype(
                 pd.CategoricalDtype(
@@ -67,24 +68,33 @@ class Controllers():
                 tmp_df = Helpers.get_errorbar_corr(tmp_df)
 
             sns.lineplot(
-                x='tp', y='score', data=tmp_df,
-                marker='o', markersize=12,
-                color = '#F71480',
-                err_style="bars", errorbar="ci", err_kws={'capsize':4, 'elinewidth': 1.5, 'capthick': 1.5})
+                x='tp',
+                y='score',
+                data=tmp_df,
+                marker='o',
+                markersize=12,
+                #color = 'black',
+                err_style="bars",
+                errorbar="ci",
+                err_kws={
+                    'capsize':4,
+                    'elinewidth': 1.5,
+                    'capthick': 1.5})
 
-            ax.xaxis.grid(False)
+            ax = Helpers.set_yaxis(measure, ax, boost_y)
 
-            if boost_y:
-                y_high = ax.get_ylim()[1]
-                y_low  = ax.get_ylim()[0]
-                y_boost = 0.3*(y_high-y_low)
-                ax.set_ylim([y_low, y_high+y_boost])
-
+            ax.set_title(measure, fontdict=config.title_fontdict)
             ax.set_xlabel('Timepoint', fontdict=config.axislabel_fontdict)
             ax.set_ylabel('Score', fontdict=config.axislabel_fontdict)
+
             ax.tick_params(axis='both', which='major', labelsize=config.ticklabel_fontsize)
-            ax.set_title(measure, fontdict=config.title_fontdict)
+            ax.tick_params(axis='y', which='both', left=False, labelleft=True)
+            ax.tick_params(axis='x', direction='inout', length=8)
+
             sns.despine(top=True, right=True, left=True, bottom=True)
+            #ax.spines['bottom'].set_color('black')
+            ax.yaxis.grid(True, linewidth=0.5, alpha=.75)
+            ax.xaxis.grid(False)
 
             Helpers.save_fig(
                 fig = fig,
@@ -167,28 +177,35 @@ class Controllers():
             ax.set_xticks([0, 30, 60, 90, 120, 240, 360, 420])
             ax.set_xlabel('Time [min]', fontdict=config.axislabel_fontdict)
             ax.tick_params(axis='both', which='major', labelsize=config.ticklabel_fontsize)
+
+            sns.despine(top=True, right=True, left=True, bottom=True)
+            ax.yaxis.grid(True, linewidth=0.5, alpha=.75)
             ax.xaxis.grid(False)
 
+            plt.legend(title='Psilocybin doses', labels=['10mg (A7)', '25mg (B7)'])
+
             if y=='temp':
+                ax.set_yticks([35.9, 36.1, 36.3, 36.5])
                 ax.set_ylabel(
                     'Body temperature [°C]',
                     fontdict=config.axislabel_fontdict)
+            elif y=='hr':
+                ax.set_yticks([65, 70, 75, 80])
+                ax.set_ylabel(
+                    'Heart rate [BPM]',
+                    fontdict=config.axislabel_fontdict)
             elif y=='dia':
+                ax.set_yticks([70, 74, 78, 82])
                 ax.set_ylabel(
                     'Diastolic BP [mmHg]',
                     fontdict=config.axislabel_fontdict)
             elif y=='sys':
+                ax.set_yticks([120, 130, 140, 150])
                 ax.set_ylabel(
                     'Systolic BP [mmHg]',
                     fontdict=config.axislabel_fontdict)
-            elif y=='hr':
-                ax.set_ylabel(
-                    'Heart rate [BPM]',
-                    fontdict=config.axislabel_fontdict)
             else:
                 assert False
-
-            sns.despine(top=True, right=True, left=True, bottom=True)
 
             Helpers.save_fig(
                 fig = fig,
@@ -272,3 +289,28 @@ class Helpers:
         df = df.rename(columns={'adj_score': 'score'})
 
         return df
+
+    @staticmethod
+    def set_yaxis(measure, ax, boost_y):
+
+        if measure=='MADRS':
+            ax.set_yticks([10, 14, 18, 22])
+            plt.axhline(y=19, color='r', linestyle='--', alpha=0.5)
+        elif measure=='Z_SWM':
+            ax.set_yticks([-0.3, 0, 0.3, 0.6])
+        elif measure=='NPIQ_SEV':
+            ax.set_yticks([1, 3, 5, 7])
+        elif measure=='UPDRS_1':
+            ax.set_yticks([7, 12, 17, 22])
+        elif measure=='UPDRS_2':
+            ax.set_yticks([8, 11, 14, 17])
+        elif measure=='UPDRS_3':
+            ax.set_yticks([32, 34, 36, 38])
+
+        if boost_y:
+            y_high = ax.get_ylim()[1]
+            y_low  = ax.get_ylim()[0]
+            y_boost = 0.3*(y_high-y_low)
+            ax.set_ylim([y_low, y_high+y_boost])
+
+        return ax

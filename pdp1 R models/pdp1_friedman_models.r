@@ -87,5 +87,5 @@ df_pw <- df_pw %>%
 df_pw$p.value <- ifelse(df_pw$p.value<0.001, '<0.001', df_pw$p.value)
 
 export_dir <- paste(here(),'exports',sep='/')
-write.csv(df_main, file=paste(export_dir,'pdp1_friedman_main_v1.csv', sep='/'), row.names=FALSE)
-write.csv(df_pw, file=paste(export_dir,'pdp1_friedman_pairwise_v1.csv', sep='/'), row.names=FALSE)
+write.csv(df_main, file=paste(export_dir,'pdp1_friedman_main.csv', sep='/'), row.names=FALSE)
+write.csv(df_pw, file=paste(export_dir,'pdp1_friedman_pairwise.csv', sep='/'), row.names=FALSE)

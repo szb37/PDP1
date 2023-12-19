@@ -567,13 +567,13 @@ class Core():
             hama_pid = df[(df['pID']==pID) & (df['measure']=='HAMA') & (df['tp']=='bsl')]
             assert hama_pid.shape[0]==1
             bsl_hama = df.iloc[hama_pid.index[0], score_idx]
-            df.loc[df['pID']==pID, 'is_anx'] = bsl_hama>14
+            df.loc[df['pID']==pID, 'is_anx'] = bsl_hama>=14
 
             ### Add is_depressed
             madrs_pid = df[(df['pID']==pID) & (df['measure']=='MADRS') & (df['tp']=='bsl')]
             assert madrs_pid.shape[0]==1
             bsl_madrs = df.iloc[madrs_pid.index[0], score_idx]
-            df.loc[df['pID']==pID, 'is_dep'] = bsl_madrs>15
+            df.loc[df['pID']==pID, 'is_dep'] = bsl_madrs>=15
 
         return df
 

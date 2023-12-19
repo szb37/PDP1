@@ -89,4 +89,4 @@ if (TRUE){
 df_stats <- rename_timepoints(df_stats)
 df_stats <- df_stats[, c("measure", "tp", "est", "SE", "hedges.g", "df", "t.value", "p.value", "sig", "adj.p.value", "adj.sig")]  
 export_dir <- paste(here(),'/exports',sep='')
-write.csv(df_stats, file=paste(export_dir,'/pdp1_mixed_models_v1.1.csv', sep=''), row.names=FALSE)
+write.csv(df_stats, file=paste(export_dir,'/pdp1_mixed_models.csv', sep=''), row.names=FALSE)
