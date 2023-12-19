@@ -35,22 +35,21 @@ for (this_measure in unique(df$measure)) {
     tmp <- tmp[tmp$pID!=1129,] 
     tmp <- tmp[tmp$pID!=1145,] 
     }
-  else if (this_measure=='UPDRS_4') {
-    tmp <- tmp[tmp$pID!=1020,] 
-    tmp <- tmp[tmp$pID!=1047,] 
-    tmp <- tmp[tmp$pID!=1051,] 
-    tmp <- tmp[tmp$pID!=1055,] 
-    tmp <- tmp[tmp$pID!=1142,] 
-    }
-  else if (this_measure=='UPDRS_SUM') {
-    tmp <- tmp[tmp$pID!=1020,] 
-    tmp <- tmp[tmp$pID!=1047,] 
-    tmp <- tmp[tmp$pID!=1051,] 
-    tmp <- tmp[tmp$pID!=1055,] 
-    tmp <- tmp[tmp$pID!=1142,] 
-  }
-  else if (this_measure=='NPIQ_DIS') {}
-  else if (this_measure=='NPIQ_SEV') {}
+  # else if (this_measure=='UPDRS_4') {
+  #   tmp <- tmp[tmp$pID!=1020,] 
+  #   tmp <- tmp[tmp$pID!=1047,] 
+  #   tmp <- tmp[tmp$pID!=1051,] 
+  #   tmp <- tmp[tmp$pID!=1055,] 
+  #   tmp <- tmp[tmp$pID!=1142,] 
+  #   }
+  # else if (this_measure=='UPDRS_SUM') {
+  #   tmp <- tmp[tmp$pID!=1020,] 
+  #   tmp <- tmp[tmp$pID!=1047,] 
+  #   tmp <- tmp[tmp$pID!=1051,] 
+  #   tmp <- tmp[tmp$pID!=1055,] 
+  #   tmp <- tmp[tmp$pID!=1142,] 
+  # }
+
   
   ### Get omnibus test results
   friedman <- friedman.test(score ~ tp|pID, tmp)

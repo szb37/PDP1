@@ -447,9 +447,23 @@ class Core():
           'updrs4_off_impact_s',
           'mdsupdrs4_off_complexity_s',
           'updrs4_dystonia_t_s']
-        df4[updrs4_cols] = df4[updrs4_cols].replace(9.0,0)
-        df4['UPDRS_4'] = df4[updrs4_cols].sum(axis=1,skipna=False)
+        df4[updrs4_cols] = df4[updrs4_cols].replace(9.0, 0)
+        df4['UPDRS_4'] = df4[updrs4_cols].sum(axis=1, skipna=False)
         df4=df4[['pID', 'tp', 'UPDRS_4']].dropna()
+
+        # The following scores are missing in REDCap. After discussion w
+        # Ellen Bradley MD, these are not truly missing values,
+        # rather patients lacked symptoms, i.e. score should be 0.
+        missing_from_redcap = pd.DataFrame(
+            columns=['pID', 'tp', 'UPDRS_4'],
+            data=[
+                [1020, 'bsl', 0],
+                [1047, 'bsl', 0],
+                [1051, 'bsl', 0],
+                [1055, 'B30', 0],
+                [1142, 'A7', 0],])
+        df4 = pd.concat([df4, missing_from_redcap], ignore_index=True)
+        df4 = df4.drop_duplicates()
 
         ### Calculate UPDRS sum_scores
         df_sum = pd.concat([df1, df2, df3, df4], axis=0, ignore_index=True)
