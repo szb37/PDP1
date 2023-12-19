@@ -221,6 +221,19 @@ class Controllers():
         tmp = tmp.str.replace('_total', '')
         df['measure'] = tmp
 
+        df = df.replace({
+            'util': 'Experience\nof unity',
+            'sprit': 'Spiritual\nexperience',
+            'bliss': 'Blissful\nstate',
+            'insight': 'Insightfulness',
+            'dis': 'Disembodiment',
+            'imp': 'Impaired control\nand cognition',
+            'anx': 'Anxiety',
+            'cimg': ' Complex\nimagery',
+            'eimg': 'Elementary\nimagery',
+            'av': 'Audio-Visual\nsynesthesia',
+            'per': 'Changed meaning\nof percepts',}, regex=True,)
+
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1)
         fig.set_size_inches([4*4.8, 4.8])
@@ -234,11 +247,14 @@ class Controllers():
                 'A0': '#56A0FB',
                 'B0': '#F71480'},)
 
-        #ax.set_xlabel(fontdict=config.axislabel_fontdict)
-        ax.tick_params(axis='both', which='major', labelsize=config.ticklabel_fontsize)
-        ax.xaxis.grid(False)
-
+        ax.tick_params(axis='y', which='major', labelsize=config.ticklabel_fontsize)
+        ax.tick_params(axis='x', which='major', labelsize=13)
+        ax.set_ylabel('Score', fontdict=config.axislabel_fontdict)
+        ax.set_xlabel('')
+        ax.set_yticks([25, 75])
         sns.despine(top=True, right=True, left=True, bottom=True)
+        ax.yaxis.grid(True, linewidth=0.5, alpha=.75)
+        ax.xaxis.grid(False)
 
         Helpers.save_fig(
             fig = fig,

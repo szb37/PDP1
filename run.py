@@ -12,7 +12,7 @@ import os
 
 
 """ process data """
-if True: # create master DF from raw data files
+if False: # create master DF from raw data files
     df = core.DataWrangl.get_master_df()
 
 if False: # create 5DASC DF from raw data files
@@ -21,7 +21,7 @@ if False: # create 5DASC DF from raw data files
 if False: # create vitals DF from raw data files
     df_vitals = core.DataWrangl.get_vitals_df()
 
-if True: # create master DF with all potential bsl covariates
+if False: # create master DF with all potential bsl covariates
     df = core.DataWrangl.get_covariates_master_df(
         df = pd.read_csv(
             os.path.join(folders.data, 'pdp1_MASTER.csv')),
@@ -65,7 +65,7 @@ if False: # make agg/ind time evolution plots
             os.path.join(folders.data, 'pdp1_MASTER.csv')),
             out_dir=folders.ind_timeevols)
 
-if False: # make 5DASC compariosn plots
+if True: # make 5DASC compariosn plots
 
     plots.Controllers.make_5dasc(
         df=pd.read_csv(
