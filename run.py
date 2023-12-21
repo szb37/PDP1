@@ -65,7 +65,7 @@ if False: # make agg/ind time evolution plots
             os.path.join(folders.data, 'pdp1_MASTER.csv')),
             out_dir=folders.ind_timeevols)
 
-if True: # make 5DASC compariosn plots
+if False: # make 5DASC compariosn plots
 
     plots.Controllers.make_5dasc(
         df=pd.read_csv(
@@ -73,12 +73,16 @@ if True: # make 5DASC compariosn plots
 
 
 """ analysis """
-if False: # make delta max
+if True: # make delta max
 
-    core.Analysis.delta_max_vitals(
+    core.Analysis.vitals_dmax(
         df=pd.read_csv(
             os.path.join(folders.data, 'pdp1_vitals.csv')),)
 
-    core.Analysis.delta_max_5DASC(
+    core.Analysis.vitals_avg(
+        df=pd.read_csv(
+            os.path.join(folders.data, 'pdp1_vitals.csv')),)
+
+    core.Analysis.fivedasc_pairedt(
         df=pd.read_csv(
             os.path.join(folders.data, 'pdp1_5dasc.csv')),)

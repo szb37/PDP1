@@ -1,4 +1,4 @@
-from scipy.stats import ttest_rel
+from scipy.stats import ttest_rel,  wilcoxon
 from scipy.stats import zscore
 from itertools import product
 import src.folders as folders
@@ -595,10 +595,9 @@ class Core():
 class Analysis():
 
     @staticmethod
-    def delta_max_5DASC(df):
+    def fivedasc_pairedt(df, folder=folders.exports, filename='pdp1_fivedasc_pairedt.csv'):
 
-        print('*** Delta_max_5DASC results: ***')
-
+        rows=[]
         for measure in df.measure.unique():
             a0s = df.loc[(df.measure==measure) & (df.tp=='A0')].sort_values(by='pID')
             b0s = df.loc[(df.measure==measure) & (df.tp=='B0')].sort_values(by='pID')
@@ -607,17 +606,17 @@ class Analysis():
                 print(f'Unequal pID arrays: {measure}')
                 continue
 
-            t, p = ttest_rel(a0s.score, b0s.score)
-            sig=''
-            if p<0.05:
-                sig='*'
+            t, tp = ttest_rel(a0s.score, b0s.score, nan_policy='omit')
+            w, wp = wilcoxon(a0s.score, b0s.score, nan_policy='omit')
+            rows.append([measure, round(t,3), round(tp,4), round(w,3), round(wp,4)])
 
-            print(f'{measure}: t={round(t,2)} p={round(p,3)} {sig}')
+        df = pd.DataFrame(columns=['measure', 't', 't.p', 'w', 'w.p'], data=rows)
+        df.to_csv(os.path.join(folder, filename), index=False)
 
     @staticmethod
-    def delta_max_vitals(df):
+    def vitals_dmax(df, folder=folders.exports, filename='pdp1_vitals_dmax.csv'):
 
-        print('*** Delta_max_vitals results: ***')
+        rows=[]
         for measure in df.measure.unique():
             a0_deltamaxs=[]
             b0_deltamaxs=[]
@@ -635,13 +634,34 @@ class Analysis():
                 b0_deltamaxs.append(b0_delta_max)
 
             # Do paired t-test of delta maxes
-            t, p = ttest_rel(a0_deltamaxs, b0_deltamaxs)
+            t, tp = ttest_rel(a0_deltamaxs, b0_deltamaxs, nan_policy='omit')
+            w, wp = wilcoxon(a0_deltamaxs, b0_deltamaxs, nan_policy='omit')
+            rows.append([measure, round(t,3), round(tp,4), round(w,3), round(wp,4)])
 
-            sig=''
-            if p<0.05:
-                sig='*'
+        df = pd.DataFrame(columns=['measure', 't', 't.p', 'w', 'w.p'], data=rows)
+        df.to_csv(os.path.join(folder, filename), index=False)
 
-            print(f'{measure}: t={round(t,2)} p={round(p,3)} {sig}')
+    @staticmethod
+    def vitals_avg(df, folder=folders.exports, filename='pdp1_vitals_avg.csv'):
+
+        rows=[]
+        for measure in df.measure.unique():
+            a0_avgs=[]
+            b0_avgs=[]
+
+            for pID in df.pID.unique():
+
+                a0_avgs.append(
+                    df[(df['measure']==measure) & (df['pID']==pID) & (df['tp']=='A0')].score.mean())
+                b0_avgs.append(
+                    df[(df['measure']==measure) & (df['pID']==pID) & (df['tp']=='B0')].score.mean())
+
+            t, tp = ttest_rel(a0_avgs, b0_avgs, nan_policy='omit')
+            w, wp = wilcoxon(a0_avgs, b0_avgs, nan_policy='omit')
+            rows.append([measure, round(t,3), round(tp,4), round(w,3), round(wp,4)])
+
+        df = pd.DataFrame(columns=['measure', 't', 't.p', 'w', 'w.p'], data=rows)
+        df.to_csv(os.path.join(folder, filename), index=False)
 
 
 class Helpers():
