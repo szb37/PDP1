@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 import src.config as config
 import src.folders as folders
 import seaborn as sns
@@ -73,28 +74,31 @@ class Controllers():
                 data=tmp_df,
                 marker='o',
                 markersize=12,
-                #color = 'black',
+                color = '#00317f',
                 err_style="bars",
                 errorbar="ci",
                 err_kws={
-                    'capsize':4,
-                    'elinewidth': 1.5,
-                    'capthick': 1.5})
+                    'capsize': 4,
+                    'elinewidth': 0.75,
+                    'capthick': 0.75})
+
+            ax.set_ylabel(measure, fontdict=config.axislabel_fontdict)
+            ax.yaxis.grid(False)
+            ax.xaxis.grid(False)
 
             ax = Helpers.set_yaxis(measure, ax, boost_y)
+            ax.set_xlabel('')
 
-            ax.set_title(measure, fontdict=config.title_fontdict)
-            ax.set_xlabel('Timepoint', fontdict=config.axislabel_fontdict)
-            ax.set_ylabel('Score', fontdict=config.axislabel_fontdict)
+            sns.despine(top=True, right=True, left=False, bottom=False, offset=10, trim=True)
 
             ax.tick_params(axis='both', which='major', labelsize=config.ticklabel_fontsize)
-            ax.tick_params(axis='y', which='both', left=False, labelleft=True)
-            ax.tick_params(axis='x', direction='inout', length=8)
+            plt.xticks(ax.get_xticks(), [
+                'Baseline',
+                '7 days post 10mg (A7)',
+                '7 days post 25mg (B7)',
+                '30 days post 25mg (B30)'])
 
-            sns.despine(top=True, right=True, left=True, bottom=True)
-            #ax.spines['bottom'].set_color('black')
-            ax.yaxis.grid(True, linewidth=0.5, alpha=.75)
-            ax.xaxis.grid(False)
+            plt.setp(ax.get_xticklabels(), rotation=35, ha="right", rotation_mode="anchor")
 
             Helpers.save_fig(
                 fig = fig,
@@ -125,7 +129,6 @@ class Controllers():
                 palette='muted',
                 dashes=False,
                 data=tmp_df,
-                #marker='o',
                 markersize=10,)
 
             plt.legend(bbox_to_anchor=(1, 1), loc='upper left')
@@ -269,12 +272,14 @@ class Helpers:
         if config.savePNG:
             fig.savefig(
                 fname=os.path.join(out_dir, f'{filename}.png'),
+                bbox_inches="tight",
                 format='png',
                 dpi=300,)
 
         if config.saveSVG:
             fig.savefig(
                 fname=os.path.join(out_dir, f'{filename}.svg'),
+                bbox_inches="tight",
                 format='svg',
                 dpi=300,)
 
@@ -309,19 +314,37 @@ class Helpers:
     @staticmethod
     def set_yaxis(measure, ax, boost_y):
 
-        if measure=='MADRS':
-            ax.set_yticks([10, 14, 18, 22])
-            plt.axhline(y=19, color='r', linestyle='--', alpha=0.5)
-        elif measure=='Z_SWM':
-            ax.set_yticks([-0.3, 0, 0.3, 0.6])
-        elif measure=='NPIQ_SEV':
-            ax.set_yticks([1, 3, 5, 7])
-        elif measure=='UPDRS_1':
-            ax.set_yticks([7, 12, 17, 22])
+        if measure=='UPDRS_1':
+            ax.set_yticks([5, 10, 15, 20, 25])
+            ax.set_ylabel('Non-motor EDL (UPDRS1)', fontdict=config.axislabel_fontdict)
         elif measure=='UPDRS_2':
-            ax.set_yticks([8, 11, 14, 17])
+            ax.set_yticks([6, 9, 12, 15, 18])
+            ax.set_ylabel('Motor EDL (UPDRS2)', fontdict=config.axislabel_fontdict)
         elif measure=='UPDRS_3':
-            ax.set_yticks([32, 34, 36, 38])
+            ax.set_yticks([31, 34, 37, 40])
+            ax.set_ylabel('Motor exam (UPDRS3)', fontdict=config.axislabel_fontdict)
+        elif measure=='MADRS':
+            ax.set_yticks([7, 12, 17, 22, 27])
+            ax.set_ylabel('Depression (MADRS)', fontdict=config.axislabel_fontdict)
+            ax.add_patch(patches.Rectangle(
+            	(-5, 19), 50, 30,
+            	edgecolor=None, facecolor='blue', alpha=0.15))
+        elif measure=='HAMA':
+            ax.set_yticks([8, 12, 16, 20])
+            ax.set_ylabel('Motor exam (UPDRS3)', fontdict=config.axislabel_fontdict)
+        elif measure=='ESAPS':
+            ax.set_yticks([0, 1, 2, 3, 4])
+        elif measure=='Z_PAL':
+            ax.set_yticks([-0.5, -0.2, 0.1, 0.4, 0.7])
+            ax.set_ylabel('Associate learning (PAL)', fontdict=config.axislabel_fontdict)
+        elif measure=='Z_SWM':
+            ax.set_yticks([-0.8, -0.4, 0, 0.4, 0.8])
+            ax.set_ylabel('Working memory (SWM)', fontdict=config.axislabel_fontdict)
+        elif measure=='PLR':
+            ax.set_yticks([2, 4, 6, 8])
+            ax.set_ylabel('Reversal learning (PRL)', fontdict=config.axislabel_fontdict)
+        else:
+            ax.set_ylabel('Score', fontdict=config.axislabel_fontdict)
 
         if boost_y:
             y_high = ax.get_ylim()[1]

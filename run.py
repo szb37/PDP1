@@ -44,21 +44,25 @@ if False: # make histograms
         df=pd.read_csv(
             os.path.join(folders.data, 'pdp1_MASTER.csv')))
 
-if False: # make agg/ind time evolution plots
+if True: # make agg time evolution plots
 
+    '''
     plots.Controllers.make_agg_timeevols(
         df=pd.read_csv(
             os.path.join(folders.data, 'pdp1_MASTER.csv')),
             errorbar_corr = True,
             boost_y = False,
             out_dir = folders.agg_timeevols)
+    '''
 
     plots.Controllers.make_agg_timeevols(
         df=pd.read_csv(
             os.path.join(folders.data, 'pdp1_MASTER.csv')),
             errorbar_corr=True,
-            boost_y=True,
+            boost_y=False,
             out_dir=os.path.join(folders.tmp))
+
+if False: # make ind time evolution plots
 
     plots.Controllers.make_ind_timeevols(
         df=pd.read_csv(
@@ -73,7 +77,7 @@ if False: # make 5DASC compariosn plots
 
 
 """ analysis """
-if True: # make delta max
+if False: # make delta max
 
     core.Analysis.vitals_dmax(
         df=pd.read_csv(
