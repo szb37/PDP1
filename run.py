@@ -35,8 +35,8 @@ if False: # create master DF with all potential bsl covariates
 if False: # make vitals
 
     plots.Controllers.make_vitals(
-        df=pd.read_csv(
-            os.path.join(folders.data, 'pdp1_vitals.csv')),)
+        df=pd.read_csv(os.path.join(folders.data, 'pdp1_vitals.csv')),
+        out_dir=folders.vitals)
 
 if False: # make histograms
 
@@ -44,7 +44,7 @@ if False: # make histograms
         df=pd.read_csv(
             os.path.join(folders.data, 'pdp1_MASTER.csv')))
 
-if True: # make agg time evolution plots
+if False: # make agg time evolution plots
 
     plots.Controllers.make_agg_timeevols(
         df=pd.read_csv(
@@ -60,11 +60,14 @@ if False: # make ind time evolution plots
             os.path.join(folders.data, 'pdp1_MASTER.csv')),
             out_dir=folders.ind_timeevols)
 
-if False: # make 5DASC compariosn plots
+if True: # make 5DASC compariosn plots
 
     plots.Controllers.make_5dasc(
-        df=pd.read_csv(
-            os.path.join(folders.data, 'pdp1_5dasc.csv')),)
+        df=pd.read_csv(os.path.join(folders.data, 'pdp1_5dasc.csv')),
+        out_dir=folders.fivedasc,
+        horizontal=False)
+
+
 
 
 """ analysis """

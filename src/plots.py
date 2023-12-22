@@ -60,21 +60,19 @@ class Controllers():
             fig = plt.figure()
             ax = fig.add_subplot(1, 1, 1)
 
-            tmp_df = df.loc[(df.measure==measure)].copy()
-
-            #if measure in has_B90:
-            tmp_df['tp'] = tmp_df['tp'].astype(
+            df_measure = df.loc[(df.measure==measure)].copy()
+            df_measure['tp'] = df_measure['tp'].astype(
                 pd.CategoricalDtype(
                 categories=['bsl', 'A7', 'B7', 'B30', 'B90'],
                 ordered=True))
 
             if errorbar_corr:
-                tmp_df = Helpers.get_errorbar_corr(tmp_df)
+                df_measure = Helpers.apply_errorbar_correction(df_measure)
 
             sns.lineplot(
                 x='tp',
                 y='score',
-                data=tmp_df,
+                data=df_measure,
                 marker='o',
                 markersize=12,
                 color = '#00317f',
@@ -162,73 +160,77 @@ class Controllers():
     @staticmethod
     def make_vitals(df, errorbar_corr=True, out_dir=folders.vitals):
 
-        for y in ['temp', 'dia', 'sys', 'hr']:
+        for measure in ['temp', 'dia', 'sys', 'hr']:
 
             fig = plt.figure()
             ax = fig.add_subplot(1, 1, 1)
-            tmp_df = df.loc[(df.measure==y)]
+            df_measure = df.loc[(df.measure==measure)]
 
             if errorbar_corr:
-                tmp_df = Helpers.get_errorbar_corr(tmp_df)
+                df_measure = Helpers.apply_errorbar_correction(df_measure)
 
             ax = sns.lineplot(
-                data = tmp_df,
+                data = df_measure,
                 x = 'time',
                 y = 'score',
                 hue = 'tp',
-                errorbar = "ci",
-                err_style = "bars",
-                err_kws = {"capsize": 5, "elinewidth": 1.5},
-                style = "tp",
+                markersize = 10,
+                legend = True,
+                style = 'tp',
                 markers = ["o", "D"],
                 palette = {
                     'A0': '#56A0FB',
                     'B0': '#F71480'},
-                markersize = 10,
-                #dashes = False,
-                legend = True,
+                errorbar = "ci",
+                err_style = "bars",
+                err_kws={
+                    'capsize': 4,
+                    'elinewidth': 0.75,
+                    'capthick': 0.75},
             )
-
-            ax.set_xticks([0, 30, 60, 90, 120, 240, 360, 420])
-            ax.set_xlabel('Time [min]', fontdict=config.axislabel_fontdict)
-            ax.tick_params(axis='both', which='major', labelsize=config.ticklabel_fontsize)
-
-            sns.despine(top=True, right=True, left=True, bottom=True)
-            ax.yaxis.grid(True, linewidth=0.5, alpha=.75)
-            ax.xaxis.grid(False)
 
             plt.legend(title='Psilocybin doses', labels=['10mg (A7)', '25mg (B7)'])
 
-            if y=='temp':
-                ax.set_yticks([35.9, 36.1, 36.3, 36.5])
+            ax.set_xlabel('Time [min]', fontdict=config.axislabel_fontdict)
+            ax.set_xticks([0, 30, 60, 90, 120, 240, 360, 420])
+
+            if measure=='temp':
+                ax.set_yticks([35.7, 35.9, 36.1, 36.3, 36.5, 36.7])
                 ax.set_ylabel(
                     'Body temperature [°C]',
                     fontdict=config.axislabel_fontdict)
-            elif y=='hr':
-                ax.set_yticks([65, 70, 75, 80])
+            elif measure=='hr':
+                ax.set_yticks([60, 65, 70, 75, 80, 85])
                 ax.set_ylabel(
                     'Heart rate [BPM]',
                     fontdict=config.axislabel_fontdict)
-            elif y=='dia':
-                ax.set_yticks([70, 74, 78, 82])
+            elif measure=='dia':
+                ax.set_yticks([65, 70, 75, 80, 85])
                 ax.set_ylabel(
                     'Diastolic BP [mmHg]',
                     fontdict=config.axislabel_fontdict)
-            elif y=='sys':
-                ax.set_yticks([120, 130, 140, 150])
+            elif measure=='sys':
+                ax.set_yticks([110, 120, 130, 140, 150, 160])
                 ax.set_ylabel(
                     'Systolic BP [mmHg]',
                     fontdict=config.axislabel_fontdict)
             else:
                 assert False
 
+            ax.tick_params(axis='both', which='major', labelsize=config.ticklabel_fontsize)
+            sns.despine(top=True, right=True, left=False, bottom=False, offset=10, trim=True)
+            ax.yaxis.grid(False)
+            ax.xaxis.grid(False)
+
             Helpers.save_fig(
                 fig = fig,
                 out_dir = out_dir,
-                filename = f'vitals_{y}')
+                filename = f'vitals_{measure}')
 
     @staticmethod
-    def make_5dasc(df, out_dir=folders.exports):
+    def make_5dasc(df, out_dir=folders.exports, horizontal=True):
+
+        assert isinstance(horizontal, bool)
 
         df = df[df['measure'].str.contains('fivedasc_')]
         tmp = df['measure'].copy()
@@ -242,7 +244,7 @@ class Controllers():
             'bliss': 'Blissful\nstate',
             'insight': 'Insightfulness',
             'dis': 'Disembodiment',
-            'imp': 'Impaired control\nand cognition',
+            'imp': 'Impaired\ncontrol and cog.',
             'anx': 'Anxiety',
             'cimg': ' Complex\nimagery',
             'eimg': 'Elementary\nimagery',
@@ -251,30 +253,58 @@ class Controllers():
 
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1)
-        fig.set_size_inches([4*4.8, 4.8])
 
-        sns.boxplot(
-            data=df,
-            x='measure',
-            y='score',
-            hue='tp',
-            palette = {
-                'A0': '#56A0FB',
-                'B0': '#F71480'},)
+        if horizontal:
+            fig.set_size_inches([4*4.8, 2*4.8])
+            sns.boxplot(
+                data=df,
+                x='measure',
+                y='score',
+                hue='tp',
+                palette = {
+                    'A0': '#56A0FB',
+                    'B0': '#F71480'},)
 
-        ax.tick_params(axis='y', which='major', labelsize=config.ticklabel_fontsize)
-        ax.tick_params(axis='x', which='major', labelsize=13)
-        ax.set_ylabel('Score', fontdict=config.axislabel_fontdict)
-        ax.set_xlabel('')
-        ax.set_yticks([25, 75])
-        sns.despine(top=True, right=True, left=True, bottom=True)
-        ax.yaxis.grid(True, linewidth=0.5, alpha=.75)
+            ax.set_yticks([0, 25, 50, 75, 100])
+            sns.despine(top=True, right=True, left=False, bottom=True)
+            ax.tick_params(axis='y', which='major', labelsize=config.ticklabel_fontsize)
+            ax.tick_params(axis='x', which='major', labelsize=13)
+            ax.set_ylabel('Score', fontdict=config.axislabel_fontdict)
+            ax.tick_params(axis='x', length=0)
+            ax.set_xlabel('')
+
+        else:
+            fig.set_size_inches([2*4.8, 4*4.8])
+            sns.boxplot(
+                data=df,
+                y='measure',
+                x='score',
+                hue='tp',
+                palette = {
+                    'A0': '#56A0FB',
+                    'B0': '#F71480'},)
+
+            ax.set_xticks([0, 25, 50, 75, 100])
+            sns.despine(top=True, right=True, left=True, bottom=False)
+            ax.tick_params(axis='both', which='major', labelsize=config.ticklabel_fontsize)
+            ax.set_xlabel('Score', fontdict=config.axislabel_fontdict)
+            ax.tick_params(axis='y', length=0)
+            ax.set_yticklabels(ax.get_yticklabels(), ha='center', va='center')
+            ax.set_ylabel('')
+
+        plt.legend(title='Psilocybin doses', labels=['10mg (A7)', '25mg (B7)'])
+        ax.yaxis.grid(False)
         ax.xaxis.grid(False)
+
+        if horizontal:
+            filename_tag='horizontal'
+        else:
+            filename_tag='vertical'
 
         Helpers.save_fig(
             fig = fig,
             out_dir = out_dir,
-            filename = '5dasc')
+            filename = f'5dasc_{filename_tag}')
 
 class Helpers:
 
@@ -298,7 +328,7 @@ class Helpers:
         plt.close()
 
     @staticmethod
-    def get_errorbar_corr(df):
+    def apply_errorbar_correction(df):
         """ Create adjustment factor: (grand_mean - each_subject_mean)
             Adjust error bars for within subject design, see:
                 - https://stats.stackexchange.com/questions/574379/correcting-repeated-measures-data-to-display-error-bars-that-show-within-subject
