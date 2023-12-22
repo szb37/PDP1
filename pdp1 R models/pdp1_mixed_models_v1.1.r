@@ -22,7 +22,12 @@ for (this_measure in unique(df_data$measure)) {
   # Add Hedges' g if needed
   if (TRUE){
     coeffs$hedges.g <- ''
-    for (this_tp in c('A7', 'B7', 'B30')) {
+    for (this_tp in c('A7', 'B7', 'B30', 'B90')) {
+      
+      if(!(this_measure %in% c('HAMA', 'MADRS', 'NPIQ_SEV', 'NPIQ_DIS'))){
+        next
+      }
+      
       g = calc_hedges.g(
         subset(df_data, (measure==this_measure) & (tp==this_tp))$score,
         subset(df_data, (measure==this_measure) & (tp=='bsl'))$score)

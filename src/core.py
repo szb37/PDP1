@@ -194,7 +194,7 @@ class Core():
             value_name='score',
             ignore_index=True)
 
-        df = df.loc[(df.tp.isin(['bsl', 'A7', 'B7', 'B30']))]
+        df = df.loc[(df.tp.isin(['bsl', 'A7', 'B7', 'B30', 'B90']))]
         df['test']='NPIQ'
 
         df = Helpers.standardize_df(df)
@@ -239,7 +239,7 @@ class Core():
 
         df = Helpers.get_REDCap_export()
 
-        df = df.loc[(df.tp.isin(['bsl', 'A7', 'B7', 'B30']))]
+        df = df.loc[(df.tp.isin(['bsl', 'A7', 'B7', 'B30', 'B90']))]
 
         df = df.loc[
             (df.cssrs_rater==4) |

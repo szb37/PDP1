@@ -51,6 +51,8 @@ class Controllers():
     @staticmethod
     def make_agg_timeevols(df, errorbar_corr=True, boost_y=True, out_dir=folders.agg_timeevols):
 
+        has_B90=['HAMA', 'MADRS', 'NPIQ_SEV', 'NPIQ_DIS']
+
         for measure in df.measure.unique():
 
             print(f'Create AGG timeevol plot: {measure}; errorbar_corr: {errorbar_corr}, boost_y: {boost_y}')
@@ -60,9 +62,10 @@ class Controllers():
 
             tmp_df = df.loc[(df.measure==measure)].copy()
 
+            #if measure in has_B90:
             tmp_df['tp'] = tmp_df['tp'].astype(
                 pd.CategoricalDtype(
-                categories=['bsl', 'A7', 'B7', 'B30'],
+                categories=['bsl', 'A7', 'B7', 'B30', 'B90'],
                 ordered=True))
 
             if errorbar_corr:
@@ -92,11 +95,20 @@ class Controllers():
             sns.despine(top=True, right=True, left=False, bottom=False, offset=10, trim=True)
 
             ax.tick_params(axis='both', which='major', labelsize=config.ticklabel_fontsize)
-            plt.xticks(ax.get_xticks(), [
-                'Baseline',
-                '7 days post 10mg (A7)',
-                '7 days post 25mg (B7)',
-                '30 days post 25mg (B30)'])
+
+            if measure in has_B90:
+                plt.xticks(ax.get_xticks(),
+                    ['Baseline',
+                    '7 days post 10mg (A7)',
+                    '7 days post 25mg (B7)',
+                    '30 days post 25mg (B30)',
+                    '90 days post 25mg (B90)'])
+            else:
+                plt.xticks(ax.get_xticks(),
+                    ['Baseline',
+                    '7 days post 10mg (A7)',
+                    '7 days post 25mg (B7)',
+                    '30 days post 25mg (B30)'])
 
             plt.setp(ax.get_xticklabels(), rotation=35, ha="right", rotation_mode="anchor")
 

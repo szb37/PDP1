@@ -5,7 +5,7 @@ sns.color_palette("colorblind")
 sns.despine()
 
 savePNG=True
-saveSVG=False
+saveSVG=True
 
 plt.rcParams.update({'font.family': 'arial'})
 title_fontdict = {'fontsize': 20, 'fontweight': 'bold'}
