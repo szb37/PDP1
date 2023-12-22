@@ -25,7 +25,9 @@ for (this_measure in unique(df_data$measure)) {
     for (this_tp in c('A7', 'B7', 'B30', 'B90')) {
       
       if(!(this_measure %in% c('HAMA', 'MADRS', 'NPIQ_SEV', 'NPIQ_DIS'))){
-        next
+        if(this_tp=='B90'){
+          next
+        }
       }
       
       g = calc_hedges.g(

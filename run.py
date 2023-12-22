@@ -12,7 +12,7 @@ import os
 
 
 """ process data """
-if True: # create master DF from raw data files
+if False: # create master DF from raw data files
     df = core.DataWrangl.get_master_df()
 
 if False: # create 5DASC DF from raw data files

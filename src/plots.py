@@ -343,7 +343,7 @@ class Helpers:
             	edgecolor=None, facecolor='blue', alpha=0.15))
         elif measure=='HAMA':
             ax.set_yticks([8, 12, 16, 20])
-            ax.set_ylabel('Motor exam (UPDRS3)', fontdict=config.axislabel_fontdict)
+            ax.set_ylabel('Anxiety (HAMA)', fontdict=config.axislabel_fontdict)
         elif measure=='ESAPS':
             ax.set_yticks([0, 1, 2, 3, 4])
         elif measure=='Z_PAL':
