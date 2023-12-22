@@ -332,8 +332,8 @@ class Core():
 
         df['score'] = df[['countReversals_test1', 'countReversals_test2', 'countReversals_test3']].sum(axis=1)
         df = df.rename(columns={'subjectid': 'pID','visit': 'tp',})
-        df['measure'] = 'PLR'
-        df['test'] = 'PLR'
+        df['measure'] = 'PRL'
+        df['test'] = 'PRL'
         df = df.loc[(df.abort==0)]
         df['tp'] = df['tp'].replace('Screening', 'bsl', regex=True)
 

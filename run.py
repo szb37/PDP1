@@ -12,7 +12,7 @@ import os
 
 
 """ process data """
-if False: # create master DF from raw data files
+if True: # create master DF from raw data files
     df = core.DataWrangl.get_master_df()
 
 if False: # create 5DASC DF from raw data files
@@ -52,7 +52,6 @@ if True: # make agg time evolution plots
             errorbar_corr = True,
             boost_y = False,
             out_dir = folders.agg_timeevols)
-
 
 if False: # make ind time evolution plots
 

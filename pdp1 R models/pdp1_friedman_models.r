@@ -21,21 +21,21 @@ colnames(df_pw) <- column_names
 for (this_measure in unique(df$measure)) {
   print(this_measure)
   
-  tmp <- subset(df, measure==this_measure)
+  tmp <- subset(df, (measure==this_measure) & (tp %in% c('bsl', 'A7', 'B7', 'B30')))
   tmp$tp <- factor(tmp$tp, levels=c('bsl', 'A7', 'B7', 'B30'))
   
   # Delete incomplete pIDs if needed
   if (this_measure %in% c('RTISMDMT', 'RTISMDRT')){
     tmp <- tmp[tmp$pID!=1051,] 
     }
-  else if (this_measure=='PLR') {
+  else if (this_measure=='PRL') {
     tmp <- tmp[tmp$pID!=1020,] 
     tmp <- tmp[tmp$pID!=1083,] 
     tmp <- tmp[tmp$pID!=1085,] 
     tmp <- tmp[tmp$pID!=1129,] 
     tmp <- tmp[tmp$pID!=1145,] 
-    }
-  
+  }
+
   ### Get omnibus test results
   friedman <- friedman.test(score ~ tp|pID, tmp)
   coeffs <- c(this_measure, friedman$statistic, round(friedman$p.value, 3))

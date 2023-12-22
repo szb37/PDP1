@@ -352,7 +352,7 @@ class Helpers:
         elif measure=='Z_SWM':
             ax.set_yticks([-0.8, -0.4, 0, 0.4, 0.8])
             ax.set_ylabel('Working memory (SWM)', fontdict=config.axislabel_fontdict)
-        elif measure=='PLR':
+        elif measure=='PRL':
             ax.set_yticks([2, 4, 6, 8])
             ax.set_ylabel('Reversal learning (PRL)', fontdict=config.axislabel_fontdict)
         else:
