@@ -160,6 +160,56 @@ class DataWrangl():
         df.to_csv(os.path.join(folder, filename), index=False)
         return df
 
+    @staticmethod
+    def get_cytokine_master_df(df, df_cyto, folder=folders.data, filename='pdp1_cytokine.csv'):
+
+        relevant_scales = [
+            #'Z_MTS', 'Z_OTS', 'Z_PAL', 'Z_RTI', 'Z_SWM', 'PRL',
+            'CSSRS', 'ESAPS', 'HAMA', 'MADRS',
+            'UPDRS_1', 'UPDRS_2', 'UPDRS_3', 'UPDRS_4', 'UPDRS_SUM']
+        df = df.loc[(df.measure.isin(relevant_scales))]
+
+        df_cyto = df_cyto.replace({"BL": "bsl"}, regex=True,)
+        del df_cyto['sampleCode']
+        df_cyto = pd.melt(
+            df_cyto,
+            id_vars= ['pID', 'tp'],
+            var_name='measure',
+            value_name='score',
+            ignore_index=True)
+        df_cyto['test']='cytokine'
+        df = pd.concat([df, df_cyto], ignore_index=True)
+        df = df.dropna(subset=['score'])
+        df['delta_score'] = math.nan
+        df = df.reset_index()
+
+        score_col_idx = df.columns.get_loc('score')
+        dscore_col_idx = df.columns.get_loc('delta_score')
+
+        for pID, measure, tp in product(df.pID.unique(), df.measure.unique(), df.tp.unique()):
+
+            if tp=='bsl':
+                continue
+
+            # Find baseline row idx
+            bsl_row_idx = df.loc[(df.pID==pID) & (df.measure==measure) & (df.tp=='bsl')].index
+            assert ((len(bsl_row_idx)==1) or (len(bsl_row_idx)==0))
+
+            # Find score row idx
+            tp_row_idx = df.loc[(df.pID==pID) & (df.measure==measure) & (df.tp==tp)].index
+            assert ((len(tp_row_idx)==1) or (len(tp_row_idx)==0))
+
+            if ((len(bsl_row_idx)==0) or (len(tp_row_idx)==0)):
+                continue
+
+            # Add delta score
+            bsl_score = df.iloc[bsl_row_idx[0], score_col_idx]
+            tp_score = df.iloc[tp_row_idx[0], score_col_idx]
+            df.iloc[tp_row_idx[0], dscore_col_idx] = tp_score-bsl_score
+
+        df.to_csv(os.path.join(folder, filename), index=False)
+        return df
+
 
 class Core():
 
