@@ -165,8 +165,8 @@ class DataWrangl():
 
         relevant_scales = [
             #'Z_MTS', 'Z_OTS', 'Z_PAL', 'Z_RTI', 'Z_SWM', 'PRL',
-            'CSSRS', 'ESAPS', 'HAMA', 'MADRS',
-            'UPDRS_1', 'UPDRS_2', 'UPDRS_3', 'UPDRS_4', 'UPDRS_SUM']
+            'ESAPS', 'HAMA', 'MADRS',
+            'UPDRS_1', 'UPDRS_2', 'UPDRS_3', 'UPDRS_4']
         df = df.loc[(df.measure.isin(relevant_scales))]
 
         df_cyto = df_cyto.replace({"BL": "bsl"}, regex=True,)
@@ -181,7 +181,7 @@ class DataWrangl():
         df = pd.concat([df, df_cyto], ignore_index=True)
         df = df.dropna(subset=['score'])
         df['delta_score'] = math.nan
-        df = df.reset_index()
+        df.reset_index(drop=True, inplace=True)
 
         score_col_idx = df.columns.get_loc('score')
         dscore_col_idx = df.columns.get_loc('delta_score')
@@ -713,6 +713,9 @@ class Analysis():
         df = pd.DataFrame(columns=['measure', 't', 't.p', 'w', 'w.p'], data=rows)
         df.to_csv(os.path.join(folder, filename), index=False)
 
+    @staticmethod
+    def observed_scores_df(df, folder=folders.exports, filename='pdp1_observed.csv'):
+        pass
 
 class Helpers():
 

@@ -30,7 +30,7 @@ if False: # create master DF with all potential bsl covariates
         df_demo = pd.read_csv(
             os.path.join(folders.data, 'pdp1_demography.csv')),)
 
-if True: # create master DF with delta-cytokine covariates
+if False: # create master DF with delta-cytokine covariates
     df = core.DataWrangl.get_cytokine_master_df(
         df = pd.read_csv(
             os.path.join(folders.data, 'pdp1_MASTER.csv')),
@@ -74,6 +74,10 @@ if False: # make 5DASC compariosn plots
         out_dir=folders.fivedasc,
         horizontal=False)
 
+if True: # make cytokine correlation matrix
+
+    plots.Controllers.make_cytokine_corrmatrix(
+        df=pd.read_csv(os.path.join(folders.data, 'pdp1_cytokine.csv')),)
 
 """ analysis """
 if False: # make vitals analysis

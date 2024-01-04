@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import src.config as config
 import src.folders as folders
+from scipy import stats
 import seaborn as sns
 import pandas as pd
 import numpy as np
@@ -306,6 +307,49 @@ class Controllers():
             out_dir = out_dir,
             filename = f'5dasc_{filename_tag}')
 
+    @staticmethod
+    def make_cytokine_corrmatrix(df, out_dir=folders.cytokine):
+
+        df = df[df['tp']=='B30'] # only timepoint when everything is measured
+        df = df.drop(columns=['tp', 'score', 'test'])
+        df = pd.pivot_table(df, index='pID', columns='measure', values='delta_score')
+        df.columns.name = None
+        df.reset_index(inplace=True, drop=True)
+        df = df[['TNF_alpha', 'IFN_gamma', 'IL10', 'IL8', 'IL6', 'MADRS', 'HAMA', 'ESAPS', 'UPDRS_1', 'UPDRS_2', 'UPDRS_3', 'UPDRS_4']]
+
+        for method in ['pearson', 'spearman']:
+
+            fig, ax = plt.subplots(dpi=300)
+
+            corr_df = df.corr(method=method).round(2)
+
+            p_mask = Helpers.get_p_mask(df.dropna(), method)
+            sig_mask = Helpers.get_sig_mask(df, p_mask)
+
+            #corr_df = Helpers.clean_corrdf(corr_df)
+            #sig_mask = Helpers.clean_corrdf(sig_mask)
+
+            sns.heatmap(
+                data = corr_df,
+                ax = ax,
+                annot = pd.DataFrame(sig_mask),
+                robust = True,
+                linewidths = .05,
+                cmap = 'vlag',
+                fmt = '')
+
+            #fig.show()
+            #fig.suptitle(title, fontsize=12, fontweight='bold')
+            #ax.set_title(f'Timepoint: {tp_name}', fontsize=10)
+            #ax.tick_params(axis='x', top=False, labeltop=False,labelbottom=True, direction='out')
+            #pyplt.yticks(rotation=0)
+
+            Helpers.save_fig(
+                fig = fig,
+                out_dir = out_dir,
+                filename = f'corr_{method}')
+
+
 class Helpers:
 
     @staticmethod
@@ -395,3 +439,48 @@ class Helpers:
             ax.set_ylim([y_low, y_high+y_boost])
 
         return ax
+
+    @staticmethod
+    def get_sig_mask(df, p_mask):
+
+        sig_mask = pd.DataFrame(np.squeeze(p_mask), columns=df.columns.tolist())
+        sig_mask.index = df.columns.tolist()
+        sig_mask = np.where(
+            sig_mask.to_numpy()<=0.001, '***',
+            np.where(sig_mask.to_numpy()<=0.01, '**',
+            np.where(sig_mask.to_numpy()<=0.05, '*', '')))
+
+        sig_mask = sig_mask.astype('str')
+        return sig_mask
+
+    @staticmethod
+    def get_p_mask(df, method):
+
+        assert method in ['pearson', 'spearman']
+
+        p_matrix = np.zeros(shape=(df.shape[1], df.shape[1]))
+        for col in df.columns:
+            for col2 in df.drop(col, axis=1).columns:
+
+                if method == 'pearson':
+                    _, p = stats.pearsonr(df[col], df[col2])
+                elif method == 'spearman':
+                    _, p = stats.spearmanr(df[col], df[col2])
+
+                p_matrix[df.columns.to_list().index(
+                    col), df.columns.to_list().index(col2)] = p
+
+        return p_matrix
+
+    @staticmethod
+    def clean_corrdf(df):
+
+        df = df.drop(
+            ['IFN_gamma', 'IL10', 'IL6', 'IL8', 'TNF_alpha'],
+            axis=0,)
+
+        df = df.drop(
+            ['CSSRS', 'ESAPS', 'HAMA', 'MADRS', 'UPDRS_1', 'UPDRS_2', 'UPDRS_3', 'UPDRS_4', 'UPDRS_SUM'],
+            axis=1,)
+
+        return df
