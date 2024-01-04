@@ -1,4 +1,5 @@
 from scipy.stats import ttest_rel,  wilcoxon
+from statistics import mean, stdev
 from scipy.stats import zscore
 from itertools import product
 import src.folders as folders
@@ -715,7 +716,32 @@ class Analysis():
 
     @staticmethod
     def observed_scores_df(df, folder=folders.exports, filename='pdp1_observed.csv'):
-        pass
+
+        master_df = pd.DataFrame(columns=['measure', 'tp', 'obs'])
+
+        measures = [
+            'UPDRS_1', 'UPDRS_2', 'UPDRS_3', 'UPDRS_4',
+            'HAMA', 'MADRS', 'CCFQ', 'CSSRS', 'ESAPS', 'NPIQ_DIS', 'NPIQ_SEV']
+
+        for measure in measures:
+            measure_df = df.loc[(df.measure==measure)]
+
+            for tp in measure_df.tp.unique():
+
+                observed_dict={'measure':[], 'tp':[], 'obs':[]}
+                observed_dict['measure'].append(measure)
+
+                scores = measure_df.loc[(measure_df.tp==tp)].score
+                scores = scores.dropna()
+
+                observed_dict['tp'].append(tp)
+                observed_dict['obs'].append(
+                    f'{round(mean(scores), 1)}±{round(stdev(scores), 1)}')
+
+                master_df = pd.concat([master_df, pd.DataFrame(observed_dict)])
+
+        master_df.to_csv(os.path.join(folder, filename), index=False)
+
 
 class Helpers():
 

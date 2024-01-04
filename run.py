@@ -74,10 +74,11 @@ if False: # make 5DASC compariosn plots
         out_dir=folders.fivedasc,
         horizontal=False)
 
-if True: # make cytokine correlation matrix
+if False: # make cytokine correlation matrix
 
     plots.Controllers.make_cytokine_corrmatrix(
         df=pd.read_csv(os.path.join(folders.data, 'pdp1_cytokine.csv')),)
+
 
 """ analysis """
 if False: # make vitals analysis
@@ -93,3 +94,9 @@ if False: # make vitals analysis
     core.Analysis.fivedasc_pairedt(
         df=pd.read_csv(
             os.path.join(folders.data, 'pdp1_5dasc.csv')),)
+
+if True: # make observed scores table
+
+    core.Analysis.observed_scores_df(
+        df=pd.read_csv(
+            os.path.join(folders.data, 'pdp1_MASTER.csv')),)
