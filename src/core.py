@@ -162,7 +162,7 @@ class DataWrangl():
         return df
 
     @staticmethod
-    def get_cytokine_master_df(df, df_cyto, folder=folders.data, filename='pdp1_cytokine.csv'):
+    def get_cytokine_master_df(df, df_cyto, folder=folders.data, filename='pdp1_cytokine_delta.csv'):
 
         relevant_scales = [
             #'Z_MTS', 'Z_OTS', 'Z_PAL', 'Z_RTI', 'Z_SWM', 'PRL',
@@ -207,6 +207,14 @@ class DataWrangl():
             bsl_score = df.iloc[bsl_row_idx[0], score_col_idx]
             tp_score = df.iloc[tp_row_idx[0], score_col_idx]
             df.iloc[tp_row_idx[0], dscore_col_idx] = tp_score-bsl_score
+
+        df = df[df['tp']=='B30'] # only timepoint when everything is measured
+        df = df.drop(columns=['tp', 'score', 'test'])
+        df = pd.pivot_table(df, index='pID', columns='measure', values='delta_score')
+        df.columns.name = None
+        df = df.reset_index()
+        df = df[['pID', 'TNF_alpha', 'IFN_gamma', 'IL10', 'IL8', 'IL6', 'MADRS', 'HAMA', 'ESAPS', 'UPDRS_1', 'UPDRS_2', 'UPDRS_3', 'UPDRS_4']]
+        df = df.dropna()
 
         df.to_csv(os.path.join(folder, filename), index=False)
         return df

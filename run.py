@@ -30,7 +30,7 @@ if False: # create master DF with all potential bsl covariates
         df_demo = pd.read_csv(
             os.path.join(folders.data, 'pdp1_demography.csv')),)
 
-if False: # create master DF with delta-cytokine covariates
+if True: # create master DF with delta-cytokine covariates
     df = core.DataWrangl.get_cytokine_master_df(
         df = pd.read_csv(
             os.path.join(folders.data, 'pdp1_MASTER.csv')),
@@ -74,20 +74,23 @@ if False: # make 5DASC compariosn plots
         out_dir=folders.fivedasc,
         horizontal=False)
 
-if False: # make cytokine correlation matrix
+if True: # make cytokine correlation matrix
 
     plots.Controllers.make_cytokine_corrmat(
-        df=pd.read_csv(os.path.join(folders.data, 'pdp1_cytokine.csv')),)
+        df=pd.read_csv(os.path.join(folders.exports, 'pdp1_cytokine_delta_corrmat.csv')),)
 
-if True: # make bsl predictors correlation matrix
-
-    plots.Controllers.make_bslpreds_corrmat(
-        df=pd.read_csv(os.path.join(folders.exports, 'pdp1_predictors_delta_corr_cont.csv')),
-        tp='B7')
+if False: # make bsl predictors correlation matrix
 
     plots.Controllers.make_bslpreds_corrmat(
-        df=pd.read_csv(os.path.join(folders.exports, 'pdp1_predictors_delta_corr_cont.csv')),
-        tp='B30')
+        df = pd.read_csv(os.path.join(folders.exports, 'pdp1_bslpreds_delta_corrmat.csv')),
+        filename = 'corrmat_bslpreds_delta',
+        tp = 'B7')
+
+    plots.Controllers.make_bslpreds_corrmat(
+        df = pd.read_csv(os.path.join(folders.exports, 'pdp1_bslpreds_delta_corrmat.csv')),
+        filename = 'corrmat_bslpreds_delta',
+        tp = 'B30')
+
 
 
 """ analysis """

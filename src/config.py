@@ -19,3 +19,21 @@ cantab_measures={
   'OTS': ['OTSMDLFC', 'OTSPSFC'], # Executive Function
   'SWM': ['SWMBE12','SWMBE4','SWMBE468','SWMBE6','SWMBE8','SWMS'], # Executive Function
 }
+
+corr_types = {
+    'pearson':{
+        'est': 'pearson_cor',
+        'p': 'pearson_p',
+        'sig': 'pearson_sig'
+    },
+    'spearman':{
+        'est': 'spearman_rho',
+        'p': 'spearman_p',
+        'sig': 'spearman_sig'
+    },
+    'kendall':{
+        'est': 'kendall_tau',
+        'p': 'kendall_p',
+        'sig': 'kendall_sig'
+    },
+}

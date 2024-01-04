@@ -308,48 +308,7 @@ class Controllers():
             filename = f'5dasc_{filename_tag}')
 
     @staticmethod
-    def make_cytokine_corrmat(df, out_dir=folders.corrmats, filename='corrmat_cytokine'):
-
-        df = df[df['tp']=='B30'] # only timepoint when everything is measured
-        df = df.drop(columns=['tp', 'score', 'test'])
-        df = pd.pivot_table(df, index='pID', columns='measure', values='delta_score')
-        df.columns.name = None
-        df.reset_index(inplace=True, drop=True)
-        df = df[['TNF_alpha', 'IFN_gamma', 'IL10', 'IL8', 'IL6', 'MADRS', 'HAMA', 'ESAPS', 'UPDRS_1', 'UPDRS_2', 'UPDRS_3', 'UPDRS_4']]
-        import pdb; pdb.set_trace()
-
-        for method in ['pearson', 'spearman']:
-
-            fig, ax = plt.subplots(dpi=300)
-
-            p_mask = Helpers.get_p_mask(df.dropna(), method)
-            sig_mask = Helpers.get_sig_mask(df, p_mask)
-
-            #corr_df = Helpers.clean_corrdf(corr_df)
-            #sig_mask = Helpers.clean_corrdf(sig_mask)
-
-            sns.heatmap(
-                data = corr_df,
-                ax = ax,
-                annot = pd.DataFrame(sig_mask),
-                robust = True,
-                linewidths = .05,
-                cmap = 'vlag',
-                fmt = '')
-
-            #fig.show()
-            #fig.suptitle(title, fontsize=12, fontweight='bold')
-            #ax.set_title(f'Timepoint: {tp_name}', fontsize=10)
-            #ax.tick_params(axis='x', top=False, labeltop=False,labelbottom=True, direction='out')
-            #pyplt.yticks(rotation=0)
-
-            Helpers.save_fig(
-                fig = fig,
-                out_dir = out_dir,
-                filename = f'corr_{method}')
-
-    @staticmethod
-    def make_bslpreds_corrmat(df, tp='B7', out_dir=folders.corrmats, filename='corrmat_bslpredsdelta'):
+    def make_bslpreds_corrmat(df, tp='B7', out_dir=folders.corrmats, filename='corrmat_bslpreds_delta'):
 
         df = df.loc[(df.tp==tp)]
         del df['tp']
@@ -373,44 +332,26 @@ class Controllers():
         tmp = tmp.str.replace('_total', '')
         df['pred'] = tmp
 
-        corr_types = {
-            'pearson':{
-                'est': 'pearson_cor',
-                'p': 'pearson_p',
-                'sig': 'pearson_sig'
-            },
-            'spearman':{
-                'est': 'spearman_rho',
-                'p': 'spearman_p',
-                'sig': 'spearman_sig'
-            },
-            'kendall':{
-                'est': 'kendall_tau',
-                'p': 'kendall_p',
-                'sig': 'kendall_sig'
-            },
-        }
-
-        for corr_type in corr_types.keys():
+        for corr_type in config.config.corr_types.keys():
 
             fig, ax = plt.subplots(dpi=300)
             ax.set_title(f'{corr_type.upper()} (@{tp})', fontsize=14, fontweight='bold')
 
             corr_df = df[[
                 'measure',
-                'pred', corr_types[corr_type]['est'],
-                corr_types[corr_type]['p'],
-                corr_types[corr_type]['sig']]]
+                'pred', config.corr_types[corr_type]['est'],
+                config.corr_types[corr_type]['p'],
+                config.corr_types[corr_type]['sig']]]
             est_df = pd.pivot_table(
                 corr_df,
                 index='pred',
                 columns='measure',
-                values=corr_types[corr_type]['est'])
+                values=config.corr_types[corr_type]['est'])
             p_df = pd.pivot_table(
                 corr_df,
                 index='pred',
                 columns='measure',
-                values=corr_types[corr_type]['p'])
+                values=config.corr_types[corr_type]['p'])
             sig_df = p_df.applymap(Helpers.sig_marking)
 
             sns.heatmap(
@@ -431,6 +372,50 @@ class Controllers():
                 fig = fig,
                 out_dir = out_dir,
                 filename = f'{filename}_{tp}_{corr_type}')
+
+    @staticmethod
+    def make_cytokine_corrmat(df, out_dir=folders.corrmats, filename='corrmat_cytokine_delta'):
+
+        for corr_type in config.corr_types.keys():
+
+            fig, ax = plt.subplots(dpi=300)
+            ax.set_title(f'{corr_type.upper()} (@B30)', fontsize=14, fontweight='bold')
+
+            corr_df = df[[
+                'measure',
+                'pred', config.corr_types[corr_type]['est'],
+                config.corr_types[corr_type]['p'],
+                config.corr_types[corr_type]['sig']]]
+            est_df = pd.pivot_table(
+                corr_df,
+                index='pred',
+                columns='measure',
+                values=config.corr_types[corr_type]['est'])
+            p_df = pd.pivot_table(
+                corr_df,
+                index='pred',
+                columns='measure',
+                values=config.corr_types[corr_type]['p'])
+            sig_df = p_df.applymap(Helpers.sig_marking)
+
+            sns.heatmap(
+                data = est_df,
+                ax = ax,
+                annot = pd.DataFrame(sig_df),
+                vmin = -1,
+                vmax = 1,
+                linewidths = .05,
+                cmap = 'vlag',
+                fmt = '')
+
+            plt.xticks(rotation=45)
+            ax.set_xlabel('')
+            ax.set_ylabel('')
+
+            Helpers.save_fig(
+                fig = fig,
+                out_dir = out_dir,
+                filename = f'{filename}_{corr_type}')
 
 
 class Helpers:
