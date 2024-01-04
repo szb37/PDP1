@@ -76,8 +76,18 @@ if False: # make 5DASC compariosn plots
 
 if False: # make cytokine correlation matrix
 
-    plots.Controllers.make_cytokine_corrmatrix(
+    plots.Controllers.make_cytokine_corrmat(
         df=pd.read_csv(os.path.join(folders.data, 'pdp1_cytokine.csv')),)
+
+if True: # make bsl predictors correlation matrix
+
+    plots.Controllers.make_bslpreds_corrmat(
+        df=pd.read_csv(os.path.join(folders.exports, 'pdp1_predictors_delta_corr_cont.csv')),
+        tp='B7')
+
+    plots.Controllers.make_bslpreds_corrmat(
+        df=pd.read_csv(os.path.join(folders.exports, 'pdp1_predictors_delta_corr_cont.csv')),
+        tp='B30')
 
 
 """ analysis """
@@ -95,7 +105,7 @@ if False: # make vitals analysis
         df=pd.read_csv(
             os.path.join(folders.data, 'pdp1_5dasc.csv')),)
 
-if True: # make observed scores table
+if False: # make observed scores table
 
     core.Analysis.observed_scores_df(
         df=pd.read_csv(

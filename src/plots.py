@@ -308,7 +308,7 @@ class Controllers():
             filename = f'5dasc_{filename_tag}')
 
     @staticmethod
-    def make_cytokine_corrmatrix(df, out_dir=folders.cytokine):
+    def make_cytokine_corrmat(df, out_dir=folders.corrmats, filename='corrmat_cytokine'):
 
         df = df[df['tp']=='B30'] # only timepoint when everything is measured
         df = df.drop(columns=['tp', 'score', 'test'])
@@ -316,12 +316,11 @@ class Controllers():
         df.columns.name = None
         df.reset_index(inplace=True, drop=True)
         df = df[['TNF_alpha', 'IFN_gamma', 'IL10', 'IL8', 'IL6', 'MADRS', 'HAMA', 'ESAPS', 'UPDRS_1', 'UPDRS_2', 'UPDRS_3', 'UPDRS_4']]
+        import pdb; pdb.set_trace()
 
         for method in ['pearson', 'spearman']:
 
             fig, ax = plt.subplots(dpi=300)
-
-            corr_df = df.corr(method=method).round(2)
 
             p_mask = Helpers.get_p_mask(df.dropna(), method)
             sig_mask = Helpers.get_sig_mask(df, p_mask)
@@ -348,6 +347,90 @@ class Controllers():
                 fig = fig,
                 out_dir = out_dir,
                 filename = f'corr_{method}')
+
+    @staticmethod
+    def make_bslpreds_corrmat(df, tp='B7', out_dir=folders.corrmats, filename='corrmat_bslpredsdelta'):
+
+        df = df.loc[(df.tp==tp)]
+        del df['tp']
+
+        df = df.loc[df.pred.isin([
+            'severity', 'age', 'LED',
+            'fivedasc_util_total', 'fivedasc_sprit_total', 'fivedasc_bliss_total',
+            'fivedasc_insight_total', 'fivedasc_dis_total', 'fivedasc_imp_total',
+            'fivedasc_anx_total', 'fivedasc_cimg_total', 'fivedasc_eimg_total',
+            'fivedasc_av_total', 'fivedasc_per_total',
+        ])]
+        df = df.loc[df.measure.isin([
+            'UPDRS_1', 'UPDRS_2', 'UPDRS_3','UPDRS_4',
+            'Z_MTS', 'Z_OTS', 'Z_PAL', 'Z_RTI', 'Z_SWM',
+            'HAMA', 'MADRS', 'ESAPS',
+        ])]
+
+        # Get rid of long 5dasc dim names
+        tmp = df['pred'].copy()
+        tmp = tmp.str.replace('fivedasc_', '11d_')
+        tmp = tmp.str.replace('_total', '')
+        df['pred'] = tmp
+
+        corr_types = {
+            'pearson':{
+                'est': 'pearson_cor',
+                'p': 'pearson_p',
+                'sig': 'pearson_sig'
+            },
+            'spearman':{
+                'est': 'spearman_rho',
+                'p': 'spearman_p',
+                'sig': 'spearman_sig'
+            },
+            'kendall':{
+                'est': 'kendall_tau',
+                'p': 'kendall_p',
+                'sig': 'kendall_sig'
+            },
+        }
+
+        for corr_type in corr_types.keys():
+
+            fig, ax = plt.subplots(dpi=300)
+            ax.set_title(f'{corr_type.upper()} (@{tp})', fontsize=14, fontweight='bold')
+
+            corr_df = df[[
+                'measure',
+                'pred', corr_types[corr_type]['est'],
+                corr_types[corr_type]['p'],
+                corr_types[corr_type]['sig']]]
+            est_df = pd.pivot_table(
+                corr_df,
+                index='pred',
+                columns='measure',
+                values=corr_types[corr_type]['est'])
+            p_df = pd.pivot_table(
+                corr_df,
+                index='pred',
+                columns='measure',
+                values=corr_types[corr_type]['p'])
+            sig_df = p_df.applymap(Helpers.sig_marking)
+
+            sns.heatmap(
+                data = est_df,
+                ax = ax,
+                annot = pd.DataFrame(sig_df),
+                vmin = -1,
+                vmax = 1,
+                linewidths = .05,
+                cmap = 'vlag',
+                fmt = '')
+
+            plt.xticks(rotation=45)
+            ax.set_xlabel('')
+            ax.set_ylabel('')
+
+            Helpers.save_fig(
+                fig = fig,
+                out_dir = out_dir,
+                filename = f'{filename}_{tp}_{corr_type}')
 
 
 class Helpers:
@@ -484,3 +567,14 @@ class Helpers:
             axis=1,)
 
         return df
+
+    @staticmethod
+    def sig_marking(value):
+        if 0.05 > value >= 0.01:
+            return '*'
+        elif 0.01 > value >= 0.001:
+            return '**'
+        elif 0.001 > value:
+            return '***'
+        else:
+            return ''
