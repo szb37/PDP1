@@ -654,7 +654,7 @@ class Core():
 class Analysis():
 
     @staticmethod
-    def fivedasc_pairedt(df, folder=folders.exports, filename='pdp1_fivedasc_pairedt.csv'):
+    def fivedasc_pairedt(df, folder=folders.vitals, filename='pdp1_fivedasc_pairedt.csv'):
 
         rows=[]
         for measure in df.measure.unique():
@@ -673,7 +673,7 @@ class Analysis():
         df.to_csv(os.path.join(folder, filename), index=False)
 
     @staticmethod
-    def vitals_dmax(df, folder=folders.exports, filename='pdp1_vitals_dmax.csv'):
+    def vitals_dmax(df, folder=folders.vitals, filename='pdp1_vitals_dmax.csv'):
 
         rows=[]
         for measure in df.measure.unique():
@@ -695,13 +695,15 @@ class Analysis():
             # Do paired t-test of delta maxes
             t, tp = ttest_rel(a0_deltamaxs, b0_deltamaxs, nan_policy='omit')
             w, wp = wilcoxon(a0_deltamaxs, b0_deltamaxs, nan_policy='omit')
-            rows.append([measure, round(t,3), round(tp,4), round(w,3), round(wp,4)])
+            rows.append([
+                measure, round(t,3), round(tp,4), round(w,3), round(wp,4),
+                round(mean(a0_deltamaxs),2), round(mean(b0_deltamaxs),2)])
 
-        df = pd.DataFrame(columns=['measure', 't', 't.p', 'w', 'w.p'], data=rows)
+        df = pd.DataFrame(columns=['measure', 't', 't.p', 'w', 'w.p', 'A0_deltamax_mean', 'B0_deltamax_mean'], data=rows)
         df.to_csv(os.path.join(folder, filename), index=False)
 
     @staticmethod
-    def vitals_avg(df, folder=folders.exports, filename='pdp1_vitals_avg.csv'):
+    def vitals_avg(df, folder=folders.vitals, filename='pdp1_vitals_avg.csv'):
 
         rows=[]
         for measure in df.measure.unique():
@@ -717,9 +719,11 @@ class Analysis():
 
             t, tp = ttest_rel(a0_avgs, b0_avgs, nan_policy='omit')
             w, wp = wilcoxon(a0_avgs, b0_avgs, nan_policy='omit')
-            rows.append([measure, round(t,3), round(tp,4), round(w,3), round(wp,4)])
+            rows.append([
+                measure, round(t,3), round(tp,4), round(w,3), round(wp,4),
+                round(mean(a0_avgs),2), round(mean(b0_avgs),2)])
 
-        df = pd.DataFrame(columns=['measure', 't', 't.p', 'w', 'w.p'], data=rows)
+        df = pd.DataFrame(columns=['measure', 't', 't.p', 'w', 'w.p', 'A0_avg', 'B0_avg'], data=rows)
         df.to_csv(os.path.join(folder, filename), index=False)
 
     @staticmethod

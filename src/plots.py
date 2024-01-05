@@ -98,16 +98,16 @@ class Controllers():
             if measure in has_B90:
                 plt.xticks(ax.get_xticks(),
                     ['Baseline',
-                    '7 days post 10mg (A7)',
-                    '7 days post 25mg (B7)',
-                    '30 days post 25mg (B30)',
-                    '90 days post 25mg (B90)'])
+                    'A7',
+                    'B7',
+                    'B30',
+                    'B90'])
             else:
                 plt.xticks(ax.get_xticks(),
                     ['Baseline',
-                    '7 days post 10mg (A7)',
-                    '7 days post 25mg (B7)',
-                    '30 days post 25mg (B30)'])
+                    'A7',
+                    'B7',
+                    'B30'])
 
             plt.setp(ax.get_xticklabels(), rotation=35, ha="right", rotation_mode="anchor")
 
@@ -190,7 +190,7 @@ class Controllers():
                     'capthick': 0.75},
             )
 
-            plt.legend(title='Psilocybin doses', labels=['10mg (A7)', '25mg (B7)'])
+            plt.legend(title='Psilocybin doses', labels=['10mg', '25mg'])
 
             ax.set_xlabel('Time [min]', fontdict=config.axislabel_fontdict)
             ax.set_xticks([0, 30, 60, 90, 120, 240, 360, 420])
@@ -229,7 +229,7 @@ class Controllers():
                 filename = f'vitals_{measure}')
 
     @staticmethod
-    def make_5dasc(df, out_dir=folders.exports, horizontal=True):
+    def make_5dasc(df, out_dir=folders.exports, horizontal=False):
 
         assert isinstance(horizontal, bool)
 
@@ -257,7 +257,7 @@ class Controllers():
 
         if horizontal:
             fig.set_size_inches([4*4.8, 2*4.8])
-            sns.boxplot(
+            sns.barplot(
                 data=df,
                 x='measure',
                 y='score',
@@ -276,26 +276,38 @@ class Controllers():
 
         else:
             fig.set_size_inches([2*4.8, 4*4.8])
-            sns.boxplot(
+            sns.barplot(
                 data=df,
                 y='measure',
                 x='score',
                 hue='tp',
+                errorbar="se",
+                capsize=0.2,
+                errwidth=0.5,
+                width=0.8,
                 palette = {
                     'A0': '#56A0FB',
                     'B0': '#F71480'},)
 
             ax.set_xticks([0, 25, 50, 75, 100])
-            sns.despine(top=True, right=True, left=True, bottom=False)
             ax.tick_params(axis='both', which='major', labelsize=config.ticklabel_fontsize)
             ax.set_xlabel('Score', fontdict=config.axislabel_fontdict)
-            ax.tick_params(axis='y', length=0)
             ax.set_yticklabels(ax.get_yticklabels(), ha='center', va='center')
             ax.set_ylabel('')
 
-        plt.legend(title='Psilocybin doses', labels=['10mg (A7)', '25mg (B7)'])
+        # Collect handles and labels for the legend
+        legend_handles = []
+        legend_labels = []
+        handles, labels = ax.get_legend_handles_labels()
+        legend_handles.extend(handles)
+        legend_labels.extend(labels)
+        custom_legend_labels = ["10 mg", "25 mg"]
+        plt.legend(legend_handles, custom_legend_labels)
+
+        ax.tick_params(axis='both', which='major', labelsize=config.ticklabel_fontsize)
         ax.yaxis.grid(False)
         ax.xaxis.grid(False)
+        sns.despine(top=True, right=True, left=False, bottom=False, offset=10, trim=True)
 
         if horizontal:
             filename_tag='horizontal'
@@ -305,7 +317,7 @@ class Controllers():
         Helpers.save_fig(
             fig = fig,
             out_dir = out_dir,
-            filename = f'5dasc_{filename_tag}')
+            filename = f'5dasc')
 
     @staticmethod
     def make_bslpreds_corrmat(df, tp='B7', out_dir=folders.corrmats, filename='corrmat_bslpreds_delta'):
@@ -321,7 +333,7 @@ class Controllers():
             'fivedasc_av_total', 'fivedasc_per_total',
         ])]
         df = df.loc[df.measure.isin([
-            'UPDRS_1', 'UPDRS_2', 'UPDRS_3','UPDRS_4',
+            'UPDRS_1', 'UPDRS_2', 'UPDRS_3','UPDRS_4', 'PRL',
             'Z_MTS', 'Z_OTS', 'Z_PAL', 'Z_RTI', 'Z_SWM',
             'HAMA', 'MADRS', 'ESAPS',
         ])]
@@ -332,7 +344,7 @@ class Controllers():
         tmp = tmp.str.replace('_total', '')
         df['pred'] = tmp
 
-        for corr_type in config.config.corr_types.keys():
+        for corr_type in config.corr_types.keys():
 
             fig, ax = plt.subplots(dpi=300)
             ax.set_title(f'{corr_type.upper()} (@{tp})', fontsize=14, fontweight='bold')
@@ -354,6 +366,7 @@ class Controllers():
                 values=config.corr_types[corr_type]['p'])
             sig_df = p_df.applymap(Helpers.sig_marking)
 
+            import pdb; pdb.set_trace()
             sns.heatmap(
                 data = est_df,
                 ax = ax,
@@ -507,51 +520,6 @@ class Helpers:
             ax.set_ylim([y_low, y_high+y_boost])
 
         return ax
-
-    @staticmethod
-    def get_sig_mask(df, p_mask):
-
-        sig_mask = pd.DataFrame(np.squeeze(p_mask), columns=df.columns.tolist())
-        sig_mask.index = df.columns.tolist()
-        sig_mask = np.where(
-            sig_mask.to_numpy()<=0.001, '***',
-            np.where(sig_mask.to_numpy()<=0.01, '**',
-            np.where(sig_mask.to_numpy()<=0.05, '*', '')))
-
-        sig_mask = sig_mask.astype('str')
-        return sig_mask
-
-    @staticmethod
-    def get_p_mask(df, method):
-
-        assert method in ['pearson', 'spearman']
-
-        p_matrix = np.zeros(shape=(df.shape[1], df.shape[1]))
-        for col in df.columns:
-            for col2 in df.drop(col, axis=1).columns:
-
-                if method == 'pearson':
-                    _, p = stats.pearsonr(df[col], df[col2])
-                elif method == 'spearman':
-                    _, p = stats.spearmanr(df[col], df[col2])
-
-                p_matrix[df.columns.to_list().index(
-                    col), df.columns.to_list().index(col2)] = p
-
-        return p_matrix
-
-    @staticmethod
-    def clean_corrdf(df):
-
-        df = df.drop(
-            ['IFN_gamma', 'IL10', 'IL6', 'IL8', 'TNF_alpha'],
-            axis=0,)
-
-        df = df.drop(
-            ['CSSRS', 'ESAPS', 'HAMA', 'MADRS', 'UPDRS_1', 'UPDRS_2', 'UPDRS_3', 'UPDRS_4', 'UPDRS_SUM'],
-            axis=1,)
-
-        return df
 
     @staticmethod
     def sig_marking(value):
