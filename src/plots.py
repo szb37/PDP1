@@ -58,14 +58,16 @@ class Controllers():
 
             print(f'Create AGG timeevol plot: {measure}; errorbar_corr: {errorbar_corr}, boost_y: {boost_y}')
 
-            fig = plt.figure()
+            fig = plt.figure(figsize=((9.6, 4.8)))
             ax = fig.add_subplot(1, 1, 1)
 
             df_measure = df.loc[(df.measure==measure)].copy()
-            df_measure['tp'] = df_measure['tp'].astype(
-                pd.CategoricalDtype(
-                categories=['bsl', 'A7', 'B7', 'B30', 'B90'],
-                ordered=True))
+            df_measure['tp'] = df_measure['tp'].replace({
+                'bsl': 0 ,
+                'A7': 32,
+                'B7': 32+14,
+                'B30': 32+14-7+30,
+                'B90': 32+14-7+90,})
 
             if errorbar_corr:
                 df_measure = Helpers.apply_errorbar_correction(df_measure)
@@ -84,31 +86,25 @@ class Controllers():
                     'elinewidth': 0.75,
                     'capthick': 0.75})
 
-            ax.set_ylabel(measure, fontdict=config.axislabel_fontdict)
-            ax.yaxis.grid(False)
-            ax.xaxis.grid(False)
+            if measure in has_B90:
+                intervals = [0, 32, 32+14, 32+14-7+30, 32+14-7+90]
+                ax.set_xticks(intervals)
+                plt.xticks(intervals, ['Baseline', 'A7', 'B7', 'B30', 'B90'])
 
+            else:
+                intervals = [0, 32, 32+14, 32+14-7+30]
+                ax.set_xticks(intervals)
+                plt.xticks(intervals, ['Baseline', 'A7', 'B7', 'B30'])
+
+            ax.set_ylabel(measure, fontdict=config.axislabel_fontdict)
             ax = Helpers.set_yaxis(measure, ax, boost_y)
             ax.set_xlabel('')
 
+            ax.yaxis.grid(False)
+            ax.xaxis.grid(False)
+
             sns.despine(top=True, right=True, left=False, bottom=False, offset=10, trim=True)
-
             ax.tick_params(axis='both', which='major', labelsize=config.ticklabel_fontsize)
-
-            if measure in has_B90:
-                plt.xticks(ax.get_xticks(),
-                    ['Baseline',
-                    'A7',
-                    'B7',
-                    'B30',
-                    'B90'])
-            else:
-                plt.xticks(ax.get_xticks(),
-                    ['Baseline',
-                    'A7',
-                    'B7',
-                    'B30'])
-
             plt.setp(ax.get_xticklabels(), rotation=35, ha="right", rotation_mode="anchor")
 
             Helpers.save_fig(
@@ -481,32 +477,33 @@ class Helpers:
     @staticmethod
     def set_yaxis(measure, ax, boost_y):
 
+        if 'Z_' in measure:
+            ax.set_yticks([-0.8, -0.4, 0, 0.4, 0.8])
+
         if measure=='UPDRS_1':
             ax.set_yticks([5, 10, 15, 20, 25])
             ax.set_ylabel('Non-motor EDL (UPDRS1)', fontdict=config.axislabel_fontdict)
         elif measure=='UPDRS_2':
-            ax.set_yticks([6, 9, 12, 15, 18])
+            ax.set_yticks([5, 10, 15, 20])
             ax.set_ylabel('Motor EDL (UPDRS2)', fontdict=config.axislabel_fontdict)
         elif measure=='UPDRS_3':
-            ax.set_yticks([31, 34, 37, 40])
+            ax.set_yticks([30, 35, 40])
             ax.set_ylabel('Motor exam (UPDRS3)', fontdict=config.axislabel_fontdict)
         elif measure=='MADRS':
-            ax.set_yticks([7, 12, 17, 22, 27])
+            ax.set_yticks([5, 10, 15, 20, 25, 30])
             ax.set_ylabel('Depression (MADRS)', fontdict=config.axislabel_fontdict)
-            ax.add_patch(patches.Rectangle(
-            	(-5, 19), 50, 30,
-            	edgecolor=None, facecolor='blue', alpha=0.15))
+            #ax.add_patch(patches.Rectangle(
+            #	(-5, 19), 50, 30,
+            #	edgecolor=None, facecolor='blue', alpha=0.15))
         elif measure=='HAMA':
-            ax.set_yticks([8, 12, 16, 20])
+            ax.set_yticks([5, 10, 15, 20])
             ax.set_ylabel('Anxiety (HAMA)', fontdict=config.axislabel_fontdict)
         elif measure=='ESAPS':
-            ax.set_yticks([0, 1, 2, 3, 4])
+            ax.set_yticks([-1, 0, 1, 2, 3, 4])
         elif measure=='Z_PAL':
-            ax.set_yticks([-0.5, -0.2, 0.1, 0.4, 0.7])
-            ax.set_ylabel('Associate learning (PAL)', fontdict=config.axislabel_fontdict)
+            ax.set_ylabel('Associate learning (PAL z-score)', fontdict=config.axislabel_fontdict)
         elif measure=='Z_SWM':
-            ax.set_yticks([-0.8, -0.4, 0, 0.4, 0.8])
-            ax.set_ylabel('Working memory (SWM)', fontdict=config.axislabel_fontdict)
+            ax.set_ylabel('Working memory (SWM z-score)', fontdict=config.axislabel_fontdict)
         elif measure=='PRL':
             ax.set_yticks([2, 4, 6, 8])
             ax.set_ylabel('Reversal learning (PRL)', fontdict=config.axislabel_fontdict)

@@ -51,7 +51,7 @@ if False: # make histograms
         df=pd.read_csv(
             os.path.join(folders.data, 'pdp1_MASTER.csv')))
 
-if False: # make agg time evolution plots
+if True: # make agg time evolution plots
 
     plots.Controllers.make_agg_timeevols(
         df=pd.read_csv(
@@ -93,7 +93,7 @@ if False: # make bsl predictors correlation matrix
 
 
 """ analysis """
-if True: # make vitals analysis
+if False: # make vitals analysis
 
     core.Analysis.vitals_dmax(
         df=pd.read_csv(
