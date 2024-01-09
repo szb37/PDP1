@@ -65,7 +65,21 @@ class DataWrangl():
         ]
 
         df = df[['tp', 'pID'] + boundless_items + anxEgoDis_items + visual_items]
-        df.dropna(subset=boundless_items + anxEgoDis_items + visual_items, how='all')
+        df = df.dropna(subset=boundless_items + anxEgoDis_items + visual_items, how='all')
+
+        # Normalize these "total" columns by the # of questions that made up the total, so that they become
+        # the average of the questions that make them up, rather than the total
+        # Experience of Unity 5D-ASC: (18, 34, 41, 42, 52) = 5 questions
+        # Spiritual Experience  5D-ASC: (9, 81, 94) = 3 questions
+        # Blissful State  5D-ASC: (12, 86, 91) = 3 questions
+        # Insightfulness  5D-ASC: (50, 69, 77) = 3 questions
+        # Disembodiment 5D-ASC: (26, 62, 63) = 3 questions
+        # Impaired Control and Cognition 5D-ASC: (8, 27, 38, 47, 64, 67, 78) = 7 questions
+        # Anxiety 5D-ASC: (32, 43, 44, 46, 56, 89) = 6 questions
+        # Complex Imagery 5D-ASC: (39, 79, 82) = 3 questions
+        # Elementary Imagery 5D-ASC: (14, 22, 33) = 3 questions
+        # Audio-Visual Synesthesia 5D-ASC: (20, 23, 75) = 3 questions
+        # Changed Meaning of Percepts  5D-ASC: (28, 31, 54) = 3 questions
 
         df['fivedasc_util_total'] = df['fivedasc_util_total'] / 5
         df['fivedasc_sprit_total'] = df['fivedasc_sprit_total'] / 3
@@ -78,15 +92,19 @@ class DataWrangl():
         df['fivedasc_eimg_total'] = df['fivedasc_eimg_total'] / 3
         df['fivedasc_av_total'] = df['fivedasc_av_total'] / 3
         df['fivedasc_per_total'] = df['fivedasc_per_total'] / 3
+        df['fivedasc_MEAN_total'] = df[boundless_items + anxEgoDis_items + visual_items].mean(axis=1)
 
         # create 3 summary columns that are the averages of the 3 major factors - these are what we'll do our statistics on
-        df['boundlessMean'] = df[boundless_items].mean(axis=1)
-        df['anxiousEgoMean'] = df[anxEgoDis_items].mean(axis=1)
-        df['visionaryMean'] = df[visual_items].mean(axis=1)
+        df['boundless'] = df[boundless_items].mean(axis=1)
+        df['anxiousEgo'] = df[anxEgoDis_items].mean(axis=1)
+        df['visionary'] = df[visual_items].mean(axis=1)
 
         df = df.melt(
             id_vars = ['pID', 'tp'],
-            value_vars = boundless_items + anxEgoDis_items + visual_items + ['boundlessMean','anxiousEgoMean','visionaryMean']
+            value_vars = boundless_items + \
+                anxEgoDis_items + \
+                visual_items + \
+                ['fivedasc_MEAN_total', 'boundless', 'anxiousEgo', 'visionary']
         )
 
         df = df.rename(columns={
@@ -94,6 +112,14 @@ class DataWrangl():
             'variable': 'measure'})
 
         df = df.dropna(subset='score')
+
+        # Get rid of long 5dasc dim names
+        tmp = df['measure'].copy()
+        tmp = tmp.str.replace('fivedasc_', '11d_')
+        tmp = tmp.str.replace('_total', '')
+        df['measure'] = tmp
+        df['score'] = round(df['score'],1)
+
         df.to_csv(os.path.join(folder, filename), index=False)
         return df
 

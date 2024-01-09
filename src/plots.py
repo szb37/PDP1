@@ -333,11 +333,7 @@ class Controllers():
 
         import pdb; pdb.set_trace()
 
-        # Get rid of long 5dasc dim names
-        tmp = df['pred'].copy()
-        tmp = tmp.str.replace('fivedasc_', '11d_')
-        tmp = tmp.str.replace('_total', '')
-        df['pred'] = tmp
+
 
         for corr_type in config.corr_types.keys():
 
