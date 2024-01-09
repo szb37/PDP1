@@ -278,9 +278,9 @@ class Controllers():
                 x='score',
                 hue='tp',
                 errorbar="se",
-                capsize=0.2,
-                errwidth=0.5,
-                width=0.8,
+                capsize=0.15,
+                errwidth=0.95,
+                width=0.6,
                 palette = {
                     'A0': '#56A0FB',
                     'B0': '#F71480'},)
@@ -300,15 +300,10 @@ class Controllers():
         custom_legend_labels = ["10 mg", "25 mg"]
         plt.legend(legend_handles, custom_legend_labels)
 
-        ax.tick_params(axis='both', which='major', labelsize=config.ticklabel_fontsize)
+        sns.despine(top=True, right=True, left=False, bottom=False, offset=10, trim=True)
+        ax.tick_params(axis='both', which='major', labelsize=22)
         ax.yaxis.grid(False)
         ax.xaxis.grid(False)
-        sns.despine(top=True, right=True, left=False, bottom=False, offset=10, trim=True)
-
-        if horizontal:
-            filename_tag='horizontal'
-        else:
-            filename_tag='vertical'
 
         Helpers.save_fig(
             fig = fig,
@@ -333,6 +328,10 @@ class Controllers():
             'Z_MTS', 'Z_OTS', 'Z_PAL', 'Z_RTI', 'Z_SWM',
             'HAMA', 'MADRS', 'ESAPS',
         ])]
+
+
+
+        import pdb; pdb.set_trace()
 
         # Get rid of long 5dasc dim names
         tmp = df['pred'].copy()

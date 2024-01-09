@@ -51,7 +51,7 @@ if False: # make histograms
         df=pd.read_csv(
             os.path.join(folders.data, 'pdp1_MASTER.csv')))
 
-if True: # make agg time evolution plots
+if False: # make agg time evolution plots
 
     plots.Controllers.make_agg_timeevols(
         df=pd.read_csv(
@@ -79,7 +79,7 @@ if False: # make cytokine correlation matrix
     plots.Controllers.make_cytokine_corrmat(
         df=pd.read_csv(os.path.join(folders.exports, 'pdp1_cytokine_delta_corrmat.csv')),)
 
-if False: # make bsl predictors correlation matrix
+if True: # make bsl predictors correlation matrix
 
     plots.Controllers.make_bslpreds_corrmat(
         df = pd.read_csv(os.path.join(folders.exports, 'pdp1_bslpreds_delta_corrmat.csv')),
