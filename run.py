@@ -15,14 +15,14 @@ import os
 if False: # create master DF from raw data files
     df = core.DataWrangl.get_master_df()
 
-if False: # create vitals DF from raw data files
+if True: # create vitals DF from raw data files
     df_vitals = core.DataWrangl.get_vitals_df()
 
 if False: # create master DF with all potential bsl covariates
     df_wcovs = core.DataWrangl.add_covs_df(
         df = pd.read_csv(os.path.join(folders.exports, 'pdp1_data_master.csv')),)
 
-if True: # calculate corrmats
+if False: # calculate corrmats
 
     core.Core.get_corrmats_df(
         df = pd.read_csv(os.path.join(folders.exports, 'pdp1_data_wcovs.csv')),)

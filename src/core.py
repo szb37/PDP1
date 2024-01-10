@@ -59,7 +59,7 @@ class DataWrangl():
         return df_master
 
     @staticmethod
-    def get_vitals_df(out_dir=folders.exports, out_fname='pdp1_vitals_data.csv'):
+    def get_vitals_df(out_dir=folders.exports, out_fname='pdp1_data_vitals.csv'):
 
         df = Helpers.get_REDCap_export()
 
