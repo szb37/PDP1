@@ -15,34 +15,121 @@ import os
 class DataWrangl():
 
     @staticmethod
-    def get_master_df(folder=folders.data, filename='pdp1_MASTER.csv'):
+    def get_master_df(out_dir=folders.exports, out_fname='pdp1_data_master.csv'):
         """ Creates and saves master DF from raw input data
         """
 
-        Core.get_demographic_data()
-        Core.get_CLINIC_data()
-        Core.get_CANTAB_data()
-        Core.get_UPDRS_data()
-        Core.get_PRL_data()
-        Core.get_NPIQ_data()
-        Core.get_PHQ_data()
+        Core.get_demographic_df()
+        Core.get_clinical_df()
+        Core.get_CANTAB_df()
+        Core.get_UPDRS_df()
+        Core.get_PRL_df()
+        Core.get_NPIQ_df()
+        Core.get_PsychQ_df()
+        Core.get_cytokine_df()
+        Core.get_5dasc_df()
+        Core.get_demographic_df()
 
         df_clinical = pd.read_csv(os.path.join(folders.data, 'pdp1_clinical.csv'))
         df_cantab = pd.read_csv(os.path.join(folders.data, 'pdp1_cantab.csv'))
         df_updrs = pd.read_csv(os.path.join(folders.data, 'pdp1_updrs.csv'))
         df_prl = pd.read_csv(os.path.join(folders.data, 'pdp1_prl.csv'))
         df_npiq = pd.read_csv(os.path.join(folders.data, 'pdp1_npiq.csv'))
+        df_psychq = pd.read_csv(os.path.join(folders.data, 'pdp1_psychq.csv'))
+        df_cytokine = pd.read_csv(os.path.join(folders.data, 'pdp1_cytokine.csv'))
+        df_5dasc = pd.read_csv(os.path.join(folders.data, 'pdp1_5dasc.csv'))
 
-        df_master = pd.concat(
-            [df_cantab, df_clinical, df_prl, df_updrs, df_npiq], ignore_index=True)
+        df_master = pd.concat([
+            df_cantab,
+            df_clinical,
+            df_prl,
+            df_updrs,
+            df_npiq,
+            df_psychq,
+            df_cytokine,
+            df_5dasc,], ignore_index=True)
+
         df_master['pID'] = df_master['pID'].astype(int)
         df_master = df_master.reset_index(drop=True)
+        df_master = Helpers.get_deltas(df_master)
 
-        df_master.to_csv(os.path.join(folder, filename), index=False)
+        df_master.to_csv(os.path.join(out_dir, out_fname), index=False)
         return df_master
 
     @staticmethod
-    def get_5dasc_df(folder=folders.data, filename='pdp1_5dasc.csv'):
+    def get_vitals_df(out_dir=folders.exports, out_fname='pdp1_vitals_data.csv'):
+
+        df = Helpers.get_REDCap_export()
+
+        cols = [col for col in df if (col.startswith('vs_bl')) | (col.startswith('vs_dose')) | (col.startswith('vs_ortho')) ]
+        df = df[ ['pID','tp'] + cols]
+
+        df = df.loc[(df.tp.isin(['A0','B0']))]
+        df = df.rename(columns={
+            'vs_bl_dia':'vs_dose0_dia1',
+            'vs_bl_sys':'vs_dose0_sys1',
+            'vs_bl_hr':'vs_dose0_hr1',
+            'vs_bl_temp':'vs_dose0_temp1',
+            'vs_ortho2_sys_sup':'vs_dose420_sys1',
+            'vs_ortho2_dia_sup':'vs_dose420_dia1',
+            'vs_ortho2_hr_sup':'vs_dose420_hr1',
+            'vs_ortho2_temp':'vs_dose420_temp1'})
+
+        cols = [col for col in df if ('sys1' in col) or \
+                ('hr1' in col) or \
+                ('temp1' in col) or \
+                ('dia1' in col)]
+
+        df = df[ ['pID','tp'] + cols]
+
+        # melt all the columns that have vitals data from the dosing days, each of which contains the string 'vs_dose
+        df = df.melt(
+            id_vars=['pID','tp'],
+            value_vars= [col for col in df if ('vs_dose' in col)]
+        )
+
+        # split what was the old columns name, eg 'vs_dose60_hr1'
+        # but is now a column of its own, after melting, into two new columns
+        # which are, in this case, '60' and 'hr'
+        df[['measurementTime','vitalSign']] = df['variable'].str.extract(r'^vs_dose(\d+)_(\w+)\d$')
+        df['measurementTime'] = df['measurementTime'].astype(int)
+        df['vitalSign'].unique()
+
+        df = df.rename(columns={
+            'value': 'score',
+            'vitalSign': 'measure',
+            'measurementTime': 'time'})
+
+        del df['variable']
+        df = df.dropna(subset='score')
+
+        # Convert temperatures values greater than 60 from Fahrenheit to Celsius
+        i = (df['measure']=='temp') & (df['score']>60)
+        df.loc[i, 'score'] = Helpers.fahrenheit_to_celsius(df.loc[i, 'score'])
+
+        df.to_csv(os.path.join(out_dir, out_fname), index=False)
+        return df
+
+    @staticmethod
+    def add_covs_df(df, out_dir=folders.exports, out_fname='pdp1_data_wcovs.csv'):
+
+        df = Core.add_depanx_covs(df)
+        df = Core.add_severity_covs(df)
+        df = Core.add_5dasc_covs(df)
+        df = Core.add_cytokine_covs(df)
+        df = Core.add_demographic_covs(
+            df,
+            df_demo = pd.read_csv(os.path.join(
+                folders.exports, 'pdp1_demography.csv')))
+
+        df.to_csv(os.path.join(out_dir, out_fname), index=False)
+        return df
+
+
+class Core():
+
+    @staticmethod
+    def get_5dasc_df(out_dir=folders.data, out_fname='pdp1_5dasc.csv'):
 
         df = Helpers.get_REDCap_export()
 
@@ -95,16 +182,16 @@ class DataWrangl():
         df['fivedasc_MEAN_total'] = df[boundless_items + anxEgoDis_items + visual_items].mean(axis=1)
 
         # create 3 summary columns that are the averages of the 3 major factors - these are what we'll do our statistics on
-        df['boundless'] = df[boundless_items].mean(axis=1)
-        df['anxiousEgo'] = df[anxEgoDis_items].mean(axis=1)
-        df['visionary'] = df[visual_items].mean(axis=1)
+        #df['3d_boundless'] = df[boundless_items].mean(axis=1)
+        #df['3d_anxiousEgo'] = df[anxEgoDis_items].mean(axis=1)
+        #df['3d_visionary'] = df[visual_items].mean(axis=1)
 
         df = df.melt(
             id_vars = ['pID', 'tp'],
             value_vars = boundless_items + \
                 anxEgoDis_items + \
                 visual_items + \
-                ['fivedasc_MEAN_total', 'boundless', 'anxiousEgo', 'visionary']
+                ['fivedasc_MEAN_total'] #, '3d_boundless', '3d_anxiousEgo', '3d_visionary']
         )
 
         df = df.rename(columns={
@@ -112,6 +199,7 @@ class DataWrangl():
             'variable': 'measure'})
 
         df = df.dropna(subset='score')
+        df['test'] = '5dasc'
 
         # Get rid of long 5dasc dim names
         tmp = df['measure'].copy()
@@ -120,84 +208,18 @@ class DataWrangl():
         df['measure'] = tmp
         df['score'] = round(df['score'],1)
 
-        df.to_csv(os.path.join(folder, filename), index=False)
+        df.to_csv(os.path.join(out_dir, out_fname), index=False)
         return df
 
     @staticmethod
-    def get_vitals_df(folder=folders.data, filename='pdp1_vitals.csv'):
+    def get_cytokine_df(out_dir=folders.data, out_fname='pdp1_cytokine.csv'):
 
-        df = Helpers.get_REDCap_export()
+        df_cyto = pd.read_csv(
+            os.path.join(folders.raw,'PDP1_cytokineData.csv'))
 
-        cols = [col for col in df if (col.startswith('vs_bl')) | (col.startswith('vs_dose')) | (col.startswith('vs_ortho')) ]
-        df = df[ ['pID','tp'] + cols]
-
-        df = df.loc[(df.tp.isin(['A0','B0']))]
-        df = df.rename(columns={
-            'vs_bl_dia':'vs_dose0_dia1',
-            'vs_bl_sys':'vs_dose0_sys1',
-            'vs_bl_hr':'vs_dose0_hr1',
-            'vs_bl_temp':'vs_dose0_temp1',
-            'vs_ortho2_sys_sup':'vs_dose420_sys1',
-            'vs_ortho2_dia_sup':'vs_dose420_dia1',
-            'vs_ortho2_hr_sup':'vs_dose420_hr1',
-            'vs_ortho2_temp':'vs_dose420_temp1'})
-
-        cols = [col for col in df if ('sys1' in col) or \
-                ('hr1' in col) or \
-                ('temp1' in col) or \
-                ('dia1' in col)]
-
-        df = df[ ['pID','tp'] + cols]
-
-        # melt all the columns that have vitals data from the dosing days, each of which contains the string 'vs_dose
-        df = df.melt(
-            id_vars=['pID','tp'],
-            value_vars= [col for col in df if ('vs_dose' in col)]
-        )
-
-        # split what was the old columns name, eg 'vs_dose60_hr1'
-        # but is now a column of its own, after melting, into two new columns
-        # which are, in this case, '60' and 'hr'
-        df[['measurementTime','vitalSign']] = df['variable'].str.extract(r'^vs_dose(\d+)_(\w+)\d$')
-        df['measurementTime'] = df['measurementTime'].astype(int)
-        df['vitalSign'].unique()
-
-        df = df.rename(columns={
-            'value': 'score',
-            'vitalSign': 'measure',
-            'measurementTime': 'time'})
-
-        del df['variable']
-        df = df.dropna(subset='score')
-
-        # Convert temperatures values greater than 60 from Fahrenheit to Celsius
-        i = (df['measure']=='temp') & (df['score']>60)
-        df.loc[i, 'score'] = Helpers.fahrenheit_to_celsius(df.loc[i, 'score'])
-
-        df.to_csv(os.path.join(folder, filename), index=False)
-        return df
-
-    @staticmethod
-    def get_covariates_master_df(df, df_5dasc, df_demo, folder=folders.data, filename='pdp1_master_covs.csv'):
-
-        df = Core.add_demographic_covariates(df, df_demo)
-        df = Core.add_depanx_covariates(df)
-        df = Core.add_5DASC_covariates(df, df_5dasc)
-
-        df.to_csv(os.path.join(folder, filename), index=False)
-        return df
-
-    @staticmethod
-    def get_cytokine_master_df(df, df_cyto, folder=folders.data, filename='pdp1_cytokine_delta.csv'):
-
-        relevant_scales = [
-            #'Z_MTS', 'Z_OTS', 'Z_PAL', 'Z_RTI', 'Z_SWM', 'PRL',
-            'ESAPS', 'HAMA', 'MADRS',
-            'UPDRS_1', 'UPDRS_2', 'UPDRS_3', 'UPDRS_4']
-        df = df.loc[(df.measure.isin(relevant_scales))]
-
-        df_cyto = df_cyto.replace({"BL": "bsl"}, regex=True,)
         del df_cyto['sampleCode']
+        df_cyto = df_cyto.replace({"BL": "bsl"}, regex=True,)
+
         df_cyto = pd.melt(
             df_cyto,
             id_vars= ['pID', 'tp'],
@@ -205,51 +227,13 @@ class DataWrangl():
             value_name='score',
             ignore_index=True)
         df_cyto['test']='cytokine'
-        df = pd.concat([df, df_cyto], ignore_index=True)
-        df = df.dropna(subset=['score'])
-        df['delta_score'] = math.nan
-        df.reset_index(drop=True, inplace=True)
+        df_cyto = df_cyto.dropna(subset='score')
 
-        score_col_idx = df.columns.get_loc('score')
-        dscore_col_idx = df.columns.get_loc('delta_score')
-
-        for pID, measure, tp in product(df.pID.unique(), df.measure.unique(), df.tp.unique()):
-
-            if tp=='bsl':
-                continue
-
-            # Find baseline row idx
-            bsl_row_idx = df.loc[(df.pID==pID) & (df.measure==measure) & (df.tp=='bsl')].index
-            assert ((len(bsl_row_idx)==1) or (len(bsl_row_idx)==0))
-
-            # Find score row idx
-            tp_row_idx = df.loc[(df.pID==pID) & (df.measure==measure) & (df.tp==tp)].index
-            assert ((len(tp_row_idx)==1) or (len(tp_row_idx)==0))
-
-            if ((len(bsl_row_idx)==0) or (len(tp_row_idx)==0)):
-                continue
-
-            # Add delta score
-            bsl_score = df.iloc[bsl_row_idx[0], score_col_idx]
-            tp_score = df.iloc[tp_row_idx[0], score_col_idx]
-            df.iloc[tp_row_idx[0], dscore_col_idx] = tp_score-bsl_score
-
-        df = df[df['tp']=='B30'] # only timepoint when everything is measured
-        df = df.drop(columns=['tp', 'score', 'test'])
-        df = pd.pivot_table(df, index='pID', columns='measure', values='delta_score')
-        df.columns.name = None
-        df = df.reset_index()
-        df = df[['pID', 'TNF_alpha', 'IFN_gamma', 'IL10', 'IL8', 'IL6', 'MADRS', 'HAMA', 'ESAPS', 'UPDRS_1', 'UPDRS_2', 'UPDRS_3', 'UPDRS_4']]
-        df = df.dropna()
-
-        df.to_csv(os.path.join(folder, filename), index=False)
-        return df
-
-
-class Core():
+        df_cyto.to_csv(os.path.join(out_dir, out_fname), index=False)
+        return df_cyto
 
     @staticmethod
-    def get_NPIQ_data(folder=folders.data, filename='pdp1_npiq.csv'):
+    def get_NPIQ_df(out_dir=folders.data, out_fname='pdp1_npiq.csv'):
 
         df = pd.read_csv(
             os.path.join(
@@ -283,11 +267,11 @@ class Core():
         df['test']='NPIQ'
 
         df = Helpers.standardize_df(df)
-        df.to_csv(os.path.join(folder, filename), index=False)
+        df.to_csv(os.path.join(out_dir, out_fname), index=False)
         return df
 
     @staticmethod
-    def get_PHQ_data(folder=folders.data, filename='pdp1_phq.csv'):
+    def get_PsychQ_df(out_dir=folders.data, out_fname='pdp1_psychq.csv'):
 
         df = Helpers.get_REDCap_export()
 
@@ -301,26 +285,26 @@ class Core():
         df[severity] = df[severity].replace(np.nan, 0)
 
         for idx, row in df.iterrows():
-            df.loc[idx, 'PHQ'] = sum([row[i]*row[j]  for i,j in zip(freq, severity)])
+            df.loc[idx, 'PsychQ'] = sum([row[i]*row[j]  for i,j in zip(freq, severity)])
 
-        df = df[['pID', 'tp', 'PHQ']]
+        df = df[['pID', 'tp', 'PsychQ']]
 
         df = pd.melt(
             df,
             id_vars= ['pID', 'tp'],
-            value_vars=['PHQ'],
+            value_vars=['PsychQ'],
             var_name='measure',
             value_name='score',
             ignore_index=True)
 
-        df['test']='PHQ'
+        df['test']='PsychQ'
 
         df = Helpers.standardize_df(df)
-        df.to_csv(os.path.join(folder, filename), index=False)
+        df.to_csv(os.path.join(out_dir, out_fname), index=False)
         return df
 
     @staticmethod
-    def get_CLINIC_data(folder=folders.data, filename='pdp1_clinical.csv'):
+    def get_clinical_df(out_dir=folders.data, out_fname='pdp1_clinical.csv'):
 
         df = Helpers.get_REDCap_export()
 
@@ -357,11 +341,11 @@ class Core():
 
         df['test'] = df['measure']
         df = Helpers.standardize_df(df)
-        df.to_csv(os.path.join(folder, filename), index=False)
+        df.to_csv(os.path.join(out_dir, out_fname), index=False)
         return df
 
     @staticmethod
-    def get_CANTAB_data(add_z=True, folder=folders.data, filename='pdp1_cantab.csv'):
+    def get_CANTAB_df(add_z=True, out_dir=folders.data, out_fname='pdp1_cantab.csv'):
 
         df = pd.read_csv(os.path.join(
             folders.raw,
@@ -392,11 +376,11 @@ class Core():
             df = Core.add_CANTAB_meanZ(df)
 
         df = Helpers.standardize_df(df)
-        df.to_csv(os.path.join(folder, filename), index=False)
+        df.to_csv(os.path.join(out_dir, out_fname), index=False)
         return df
 
     @staticmethod
-    def get_PRL_data(folder=folders.data, filename='pdp1_prl.csv'):
+    def get_PRL_df(out_dir=folders.data, out_fname='pdp1_prl.csv'):
 
         df_index = pd.read_csv(os.path.join(
             folders.raw,
@@ -423,11 +407,11 @@ class Core():
         df['tp'] = df['tp'].replace('Screening', 'bsl', regex=True)
 
         df = Helpers.standardize_df(df)
-        df.to_csv(os.path.join(folder, filename), index=False)
+        df.to_csv(os.path.join(out_dir, out_fname), index=False)
         return df
 
     @staticmethod
-    def get_demographic_data(folder=folders.data, filename='pdp1_demography.csv'):
+    def get_demographic_df(out_dir=folders.exports, out_fname='pdp1_demography.csv'):
 
         df = pd.read_csv(os.path.join(
             folders.raw,
@@ -463,11 +447,22 @@ class Core():
         df_led['pID'] = df_led['pID'].astype(int)
 
         df = pd.merge(df, df_led, on='pID', how='inner')
-        df.to_csv(os.path.join(folder, filename), index=False)
+        df = pd.melt(
+            df,
+            id_vars= ['pID'],
+            var_name='measure',
+            value_name='score',
+            ignore_index=True)
+
+        df=df.dropna(subset='score')
+        df['test'] = 'demography'
+        df['tp'] = 'bsl'
+
+        df.to_csv(os.path.join(out_dir, out_fname), index=False)
         return df
 
     @staticmethod
-    def get_UPDRS_data(folder=folders.data, filename='pdp1_updrs.csv'):
+    def get_UPDRS_df(out_dir=folders.data, out_fname='pdp1_updrs.csv'):
 
         df = Helpers.get_REDCap_export()
 
@@ -578,8 +573,9 @@ class Core():
         df['test'] = 'UPDRS'
 
         df = Helpers.standardize_df(df)
-        df.to_csv(os.path.join(folder, filename), index=False)
+        df.to_csv(os.path.join(out_dir, out_fname), index=False)
         return df
+
 
     @staticmethod
     def add_CANTAB_meanZ(df):
@@ -614,19 +610,24 @@ class Core():
         return df
 
     @staticmethod
-    def add_demographic_covariates(df, df_demo):
+    def add_demographic_covs(df, df_demo):
 
-        ### Add variables from df_demo
-        for bsl_var in ['gender', 'edu', 'age', 'LED']:
-            df[bsl_var]=None
-            col_idx = df_demo.columns.get_loc(bsl_var)
+        score_idx = df_demo.columns.get_loc('score')
+        for measure, pID in product(df_demo.measure.unique(), df.pID.unique()):
+            tmp = df_demo[(df_demo['pID']==pID) & (df_demo['measure']==measure)]
 
-            for pID in df.pID.unique():
-                row_idx = df_demo[df_demo['pID']==pID].index[0]
-                bsl_val = df_demo.iloc[row_idx, col_idx]
-                df.loc[(df.pID==pID), bsl_var] = bsl_val
+            if tmp.shape[0]==0:
+                continue
 
-        ### Add UPDRS_3 as bsl_severity measure
+            assert tmp.shape[0]==1
+            df.loc[df['pID']==pID, measure] = df_demo.iloc[tmp.index[0], score_idx]
+
+        return df
+
+    @staticmethod
+    def add_severity_covs(df):
+        """ Add UPDRS_3 as bsl_severity measure """
+
         col_idx = df.columns.get_loc('score')
         for pID in df.pID.unique():
 
@@ -637,26 +638,28 @@ class Core():
 
             assert len(row_idx)==1
 
-            bsl_val = df.iloc[ row_idx[0], col_idx]
+            bsl_val = df.iloc[row_idx[0], col_idx]
             df.loc[(df.pID==pID), 'severity'] = bsl_val
 
         return df
 
     @staticmethod
-    def add_5DASC_covariates(df, df_5dasc):
+    def add_5dasc_covs(df):
+
+        df_5dasc = df.loc[(df.test=='5dasc')].copy()
 
         for measure, pID in product(df_5dasc.measure.unique(), df.pID.unique()):
             tmp = df_5dasc[(df_5dasc['pID']==pID) & (df_5dasc['measure']==measure)]
-            assert tmp.shape==(2,4)
+            assert tmp.shape[0]==2
             pID_mean = round(tmp.score.mean(), 2)
             df.loc[df['pID']==pID, measure] =  pID_mean
 
         return df
 
     @staticmethod
-    def add_depanx_covariates(df):
-        """ 15+ MADRS @ baseline => depressed
-            14+ HAMA @ baseline => anxious
+    def add_depanx_covs(df):
+        """ 15 <= MADRS @ baseline => depressed
+            14 <= HAMA @ baseline => anxious
         """
         score_idx = df.columns.get_loc('score')
 
@@ -676,11 +679,33 @@ class Core():
 
         return df
 
+    @staticmethod
+    def add_cytokine_covs(df):
+
+        df_cytokine = df.loc[(df.test=='cytokine')].copy().reset_index()
+        delta_score_idx = df_cytokine.columns.get_loc('delta_score')
+        tps = ['A1', 'B1', 'B30']
+
+        for measure, pID, tp in product(df_cytokine.measure.unique(), df.pID.unique(), tps):
+            tmp = df_cytokine[
+                (df_cytokine['pID']==pID) &
+                (df_cytokine['tp']==tp) &
+                (df_cytokine['measure']==measure)]
+
+            if tmp.shape[0]==0:
+                continue
+
+            assert tmp.shape[0]==1
+            delta_value = df_cytokine.iloc[tmp.index[0], delta_score_idx]
+            df.loc[df['pID']==pID, f'delta_{tp}_{measure}'] = delta_value
+
+        return df
+
 
 class Analysis():
 
     @staticmethod
-    def fivedasc_pairedt(df, folder=folders.vitals, filename='pdp1_fivedasc_pairedt.csv'):
+    def fivedasc_pairedt(df, out_dir=folders.vitals, out_fname='pdp1_fivedasc_pairedt.csv'):
 
         rows=[]
         for measure in df.measure.unique():
@@ -696,10 +721,10 @@ class Analysis():
             rows.append([measure, round(t,3), round(tp,4), round(w,3), round(wp,4)])
 
         df = pd.DataFrame(columns=['measure', 't', 't.p', 'w', 'w.p'], data=rows)
-        df.to_csv(os.path.join(folder, filename), index=False)
+        df.to_csv(os.path.join(out_dir, out_fname), index=False)
 
     @staticmethod
-    def vitals_dmax(df, folder=folders.vitals, filename='pdp1_vitals_dmax.csv'):
+    def vitals_dmax(df, out_dir=folders.vitals, out_fname='pdp1_vitals_dmax.csv'):
 
         rows=[]
         for measure in df.measure.unique():
@@ -726,10 +751,10 @@ class Analysis():
                 round(mean(a0_deltamaxs),2), round(mean(b0_deltamaxs),2)])
 
         df = pd.DataFrame(columns=['measure', 't', 't.p', 'w', 'w.p', 'A0_deltamax_mean', 'B0_deltamax_mean'], data=rows)
-        df.to_csv(os.path.join(folder, filename), index=False)
+        df.to_csv(os.path.join(out_dir, out_fname), index=False)
 
     @staticmethod
-    def vitals_avg(df, folder=folders.vitals, filename='pdp1_vitals_avg.csv'):
+    def vitals_avg(df, out_dir=folders.vitals, out_fname='pdp1_vitals_avg.csv'):
 
         rows=[]
         for measure in df.measure.unique():
@@ -750,10 +775,10 @@ class Analysis():
                 round(mean(a0_avgs),2), round(mean(b0_avgs),2)])
 
         df = pd.DataFrame(columns=['measure', 't', 't.p', 'w', 'w.p', 'A0_avg', 'B0_avg'], data=rows)
-        df.to_csv(os.path.join(folder, filename), index=False)
+        df.to_csv(os.path.join(out_dir, out_fname), index=False)
 
     @staticmethod
-    def observed_scores_df(df, folder=folders.exports, filename='pdp1_observed.csv'):
+    def observed_scores_df(df, out_dir=folders.exports, out_fname='pdp1_observed.csv'):
 
         master_df = pd.DataFrame(columns=['measure', 'tp', 'obs'])
 
@@ -778,7 +803,7 @@ class Analysis():
 
                 master_df = pd.concat([master_df, pd.DataFrame(observed_dict)])
 
-        master_df.to_csv(os.path.join(folder, filename), index=False)
+        master_df.to_csv(os.path.join(out_dir, out_fname), index=False)
 
 
 class Helpers():
@@ -877,5 +902,35 @@ class Helpers():
             "day_ab25_arm_1": "B25",
             "day_ab30_arm_1": "B30",
             "day_ab90_phone_arm_1": "B90"}, regex=True,)
+
+        return df
+
+    @staticmethod
+    def get_deltas(df):
+
+        df['delta_score'] = math.nan
+        score_col_idx = df.columns.get_loc('score')
+        dscore_col_idx = df.columns.get_loc('delta_score')
+
+        for pID, measure, tp in product(df.pID.unique(), df.measure.unique(), df.tp.unique()):
+
+            if tp=='bsl':
+                continue
+
+            # Find baseline row idx
+            bsl_row_idx = df.loc[(df.pID==pID) & (df.measure==measure) & (df.tp=='bsl')].index
+            assert ((len(bsl_row_idx)==1) or (len(bsl_row_idx)==0))
+
+            # Find score row idx
+            tp_row_idx = df.loc[(df.pID==pID) & (df.measure==measure) & (df.tp==tp)].index
+            assert ((len(tp_row_idx)==1) or (len(tp_row_idx)==0))
+
+            if ((len(bsl_row_idx)==0) or (len(tp_row_idx)==0)):
+                continue
+
+            # Add delta score
+            bsl_score = df.iloc[bsl_row_idx[0], score_col_idx]
+            tp_score = df.iloc[tp_row_idx[0], score_col_idx]
+            df.iloc[tp_row_idx[0], dscore_col_idx] = tp_score-bsl_score
 
         return df

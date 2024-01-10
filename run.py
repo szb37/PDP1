@@ -15,27 +15,12 @@ import os
 if False: # create master DF from raw data files
     df = core.DataWrangl.get_master_df()
 
-if True: # create 5DASC DF from raw data files
-    df_5d = core.DataWrangl.get_5dasc_df()
-
 if False: # create vitals DF from raw data files
     df_vitals = core.DataWrangl.get_vitals_df()
 
-if False: # create master DF with all potential bsl covariates
-    df = core.DataWrangl.get_covariates_master_df(
-        df = pd.read_csv(
-            os.path.join(folders.data, 'pdp1_MASTER.csv')),
-        df_5dasc = pd.read_csv(
-            os.path.join(folders.data, 'pdp1_5dasc.csv')),
-        df_demo = pd.read_csv(
-            os.path.join(folders.data, 'pdp1_demography.csv')),)
-
-if False: # create master DF with delta-cytokine covariates
-    df = core.DataWrangl.get_cytokine_master_df(
-        df = pd.read_csv(
-            os.path.join(folders.data, 'pdp1_MASTER.csv')),
-        df_cyto = pd.read_csv(
-            os.path.join(folders.raw, 'PDP1_cytokineData.csv')),)
+if True: # create master DF with all potential bsl covariates
+    df = core.DataWrangl.add_covs_df(
+        df = pd.read_csv(os.path.join(folders.exports, 'pdp1_data_master.csv')),)
 
 
 """ plots """
@@ -51,6 +36,13 @@ if False: # make histograms
         df=pd.read_csv(
             os.path.join(folders.data, 'pdp1_MASTER.csv')))
 
+if False: # make ind time evolution plots
+
+    plots.Controllers.make_ind_timeevols(
+        df=pd.read_csv(
+            os.path.join(folders.data, 'pdp1_MASTER.csv')),
+            out_dir=folders.ind_timeevols)
+
 if False: # make agg time evolution plots
 
     plots.Controllers.make_agg_timeevols(
@@ -60,14 +52,7 @@ if False: # make agg time evolution plots
             boost_y = False,
             out_dir = folders.agg_timeevols)
 
-if False: # make ind time evolution plots
-
-    plots.Controllers.make_ind_timeevols(
-        df=pd.read_csv(
-            os.path.join(folders.data, 'pdp1_MASTER.csv')),
-            out_dir=folders.ind_timeevols)
-
-if False: # make 5DASC compariosn plots
+if False: # make 5DASC comparison plots
 
     plots.Controllers.make_5dasc(
         df=pd.read_csv(os.path.join(folders.data, 'pdp1_5dasc.csv')),
@@ -90,6 +75,12 @@ if False: # make bsl predictors correlation matrix
         df = pd.read_csv(os.path.join(folders.exports, 'pdp1_bslpreds_delta_corrmat.csv')),
         filename = 'corrmat_bslpreds_delta',
         tp = 'B30')
+
+if False: # make 5DASC correlation matrix
+
+    plots.Controllers.make_5dasc_corrmat(
+        df = pd.read_csv(os.path.join(folders.data, 'pdp1_5dasc.csv')),
+        filename = 'corrmat_5dasc_delta',)
 
 
 """ analysis """
