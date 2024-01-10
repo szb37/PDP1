@@ -1,8 +1,8 @@
+from itertools import product
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import src.config as config
 import src.folders as folders
-from scipy import stats
 import seaborn as sns
 import pandas as pd
 import numpy as np
@@ -14,7 +14,7 @@ class Controllers():
     @staticmethod
     def make_histograms(df, ignore_measure=[], out_dir=folders.histograms):
 
-        for measure in df.measure.unique():
+        for measure in config.measures:
             print(f'Create HIST plot: {measure}')
 
             if measure in ignore_measure:
@@ -50,24 +50,24 @@ class Controllers():
                 filename = f'histogram_{measure}')
 
     @staticmethod
-    def make_agg_timeevols(df, errorbar_corr=True, boost_y=True, out_dir=folders.agg_timeevols):
+    def make_agg_timeevols(df, measures=config.outcomes, errorbar_corr=True, out_dir=folders.agg_timeevols):
 
         has_B90=['HAMA', 'MADRS', 'NPIQ_SEV', 'NPIQ_DIS']
 
-        for measure in df.measure.unique():
+        for measure in measures:
 
-            print(f'Create AGG timeevol plot: {measure}; errorbar_corr: {errorbar_corr}, boost_y: {boost_y}')
+            print(f'Create AGG timeevol plot: {measure}; errorbar_corr: {errorbar_corr}')
 
-            fig = plt.figure(figsize=((9.6, 4.8)))
+            fig = plt.figure(figsize=((6.4, 4.8)))
             ax = fig.add_subplot(1, 1, 1)
 
             df_measure = df.loc[(df.measure==measure)].copy()
             df_measure['tp'] = df_measure['tp'].replace({
                 'bsl': 0 ,
-                'A7': 32,
-                'B7': 32+14,
-                'B30': 32+14-7+30,
-                'B90': 32+14-7+90,})
+                'A7': 24,
+                'B7': 24+14,
+                'B30': 24+14-7+30,
+                'B90': 24+14-7+90,})
 
             if errorbar_corr:
                 df_measure = Helpers.apply_errorbar_correction(df_measure)
@@ -87,17 +87,17 @@ class Controllers():
                     'capthick': 0.75})
 
             if measure in has_B90:
-                intervals = [0, 32, 32+14, 32+14-7+30, 32+14-7+90]
+                intervals = [0, 24, 24+14, 24+14-7+30, 24+14-7+90]
                 ax.set_xticks(intervals)
                 plt.xticks(intervals, ['Baseline', 'A7', 'B7', 'B30', 'B90'])
 
             else:
-                intervals = [0, 32, 32+14, 32+14-7+30]
+                intervals = [0, 24, 24+14, 24+14-7+30]
                 ax.set_xticks(intervals)
                 plt.xticks(intervals, ['Baseline', 'A7', 'B7', 'B30'])
 
             ax.set_ylabel(measure, fontdict=config.axislabel_fontdict)
-            ax = Helpers.set_yaxis(measure, ax, boost_y)
+            ax = Helpers.set_yaxis(measure, ax, boost_y=False)
             ax.set_xlabel('')
 
             ax.yaxis.grid(False)
@@ -113,9 +113,9 @@ class Controllers():
                 filename = f'pdp1_agg_timeevol_{measure}')
 
     @staticmethod
-    def make_ind_timeevols(df, out_dir=folders.ind_timeevols):
+    def make_ind_timeevols(df, measures=config.outcomes, out_dir=folders.ind_timeevols):
 
-        for measure in df.measure.unique():
+        for measure in measures:
             print(f'Create IND timeevol plot: {measure}')
 
             fig = plt.figure()
@@ -311,172 +311,32 @@ class Controllers():
             filename = f'5dasc')
 
     @staticmethod
-    def make_bslpreds_corrmat(df, tp='B7', out_dir=folders.corrmats, out_fname='corrmat_bslpreds_delta'):
+    def make_corrmat(coeffs_df, pvalues_df, method, tp, pred_set, out_dir=folders.corrmats, out_fname='corrmat'):
 
-        df = df.loc[(df.tp==tp)]
-        del df['tp']
+        coeffs_df = coeffs_df[coeffs_df.index.isin(pred_set)]
+        pvalues_df = pvalues_df[pvalues_df.index.isin(pred_set)]
 
-        df = df.loc[df.pred.isin([
-            'severity', 'age', 'LED',
-            'fivedasc_util_total', 'fivedasc_sprit_total', 'fivedasc_bliss_total',
-            'fivedasc_insight_total', 'fivedasc_dis_total', 'fivedasc_imp_total',
-            'fivedasc_anx_total', 'fivedasc_cimg_total', 'fivedasc_eimg_total',
-            'fivedasc_av_total', 'fivedasc_per_total',
-        ])]
-        df = df.loc[df.measure.isin([
-            'UPDRS_1', 'UPDRS_2', 'UPDRS_3','UPDRS_4', 'PRL',
-            'Z_MTS', 'Z_OTS', 'Z_PAL', 'Z_RTI', 'Z_SWM',
-            'HAMA', 'MADRS', 'ESAPS',
-        ])]
+        # Plot results
+        fig, ax = plt.subplots(dpi=300)
+        ax.set_title(f'{method.upper()} @{tp}', fontsize=14, fontweight='bold')
 
-        for corr_type in config.corr_types.keys():
+        sns.heatmap(
+            data = coeffs_df.astype(float),
+            ax = ax,
+            annot = pvalues_df.applymap(Helpers.sig_marking),
+            vmin = -1,
+            vmax = 1,
+            linewidths = .05,
+            cmap = 'vlag',
+            fmt = '')
 
-            fig, ax = plt.subplots(dpi=300)
-            ax.set_title(f'{corr_type.upper()} (@{tp})', fontsize=14, fontweight='bold')
+        plt.xticks(rotation=45)
+        ax.set_xlabel(f'{tp}-baseline scores')
 
-            corr_df = df[[
-                'measure',
-                'pred', config.corr_types[corr_type]['est'],
-                config.corr_types[corr_type]['p'],
-                config.corr_types[corr_type]['sig']]]
-            est_df = pd.pivot_table(
-                corr_df,
-                index='pred',
-                columns='measure',
-                values=config.corr_types[corr_type]['est'])
-            p_df = pd.pivot_table(
-                corr_df,
-                index='pred',
-                columns='measure',
-                values=config.corr_types[corr_type]['p'])
-            sig_df = p_df.applymap(Helpers.sig_marking)
-
-            sns.heatmap(
-                data = est_df,
-                ax = ax,
-                annot = pd.DataFrame(sig_df),
-                vmin = -1,
-                vmax = 1,
-                linewidths = .05,
-                cmap = 'vlag',
-                fmt = '')
-
-            plt.xticks(rotation=45)
-            ax.set_xlabel('')
-            ax.set_ylabel('')
-
-            Helpers.save_fig(
-                fig = fig,
-                out_dir = out_dir,
-                filename = f'{filename}_{tp}_{corr_type}')
-
-    @staticmethod
-    def make_cytokine_corrmat(df, out_dir=folders.corrmats, out_fname='corrmat_cytokine_delta'):
-
-        for corr_type in config.corr_types.keys():
-
-            fig, ax = plt.subplots(dpi=300)
-            ax.set_title(f'{corr_type.upper()} (@B30)', fontsize=14, fontweight='bold')
-
-            corr_df = df[[
-                'measure',
-                'pred', config.corr_types[corr_type]['est'],
-                config.corr_types[corr_type]['p'],
-                config.corr_types[corr_type]['sig']]]
-            est_df = pd.pivot_table(
-                corr_df,
-                index='pred',
-                columns='measure',
-                values=config.corr_types[corr_type]['est'])
-            p_df = pd.pivot_table(
-                corr_df,
-                index='pred',
-                columns='measure',
-                values=config.corr_types[corr_type]['p'])
-            sig_df = p_df.applymap(Helpers.sig_marking)
-
-            sns.heatmap(
-                data = est_df,
-                ax = ax,
-                annot = pd.DataFrame(sig_df),
-                vmin = -1,
-                vmax = 1,
-                linewidths = .05,
-                cmap = 'vlag',
-                fmt = '')
-
-            plt.xticks(rotation=45)
-            ax.set_xlabel('')
-            ax.set_ylabel('')
-
-            Helpers.save_fig(
-                fig = fig,
-                out_dir = out_dir,
-                filename = f'{filename}_{corr_type}')
-
-    @staticmethod
-    def make_5dasc_corrmat(df, out_dir=folders.corrmats, out_fname='corrmat_5dasc_delta'):
-
-        df = df.loc[(df.tp==tp)]
-        del df['tp']
-
-        df = df.loc[df.pred.isin([
-            'severity', 'age', 'LED',
-            'fivedasc_util_total', 'fivedasc_sprit_total', 'fivedasc_bliss_total',
-            'fivedasc_insight_total', 'fivedasc_dis_total', 'fivedasc_imp_total',
-            'fivedasc_anx_total', 'fivedasc_cimg_total', 'fivedasc_eimg_total',
-            'fivedasc_av_total', 'fivedasc_per_total',
-        ])]
-        df = df.loc[df.measure.isin([
-            'UPDRS_1', 'UPDRS_2', 'UPDRS_3','UPDRS_4', 'PRL',
-            'Z_MTS', 'Z_OTS', 'Z_PAL', 'Z_RTI', 'Z_SWM',
-            'HAMA', 'MADRS', 'ESAPS',
-        ])]
-
-        for tp in df.tp.unique():
-            for corr_type in config.corr_types.keys():
-
-                fig, ax = plt.subplots(dpi=300)
-                ax.set_title(f'{corr_type.upper()} (@{tp})', fontsize=14, fontweight='bold')
-
-                corr_df = df[[
-                    'measure',
-                    'pred', config.corr_types[corr_type]['est'],
-                    config.corr_types[corr_type]['p'],
-                    config.corr_types[corr_type]['sig']]]
-                est_df = pd.pivot_table(
-                    corr_df,
-                    index='pred',
-                    columns='measure',
-                    values=config.corr_types[corr_type]['est'])
-                p_df = pd.pivot_table(
-                    corr_df,
-                    index='pred',
-                    columns='measure',
-                    values=config.corr_types[corr_type]['p'])
-                sig_df = p_df.applymap(Helpers.sig_marking)
-
-                sns.heatmap(
-                    data = est_df,
-                    ax = ax,
-                    annot = pd.DataFrame(sig_df),
-                    vmin = -1,
-                    vmax = 1,
-                    linewidths = .05,
-                    cmap = 'vlag',
-                    fmt = '')
-
-                plt.xticks(rotation=45)
-                ax.set_xlabel('')
-                ax.set_ylabel('')
-
-                Helpers.save_fig(
-                    fig = fig,
-                    out_dir = out_dir,
-                    filename = f'{filename}_{tp}_{corr_type}')
-
-
-
+        Helpers.save_fig(
+            fig = fig,
+            out_dir = out_dir,
+            filename = f'{out_fname}_{tp}_{method}')
 
 
 class Helpers:

@@ -4,6 +4,8 @@ from scipy.stats import zscore
 from itertools import product
 import src.folders as folders
 import src.config as config
+import src.plots as plots
+from scipy import stats
 import pandas as pd
 import numpy as np
 import datetime
@@ -117,6 +119,7 @@ class DataWrangl():
         df = Core.add_severity_covs(df)
         df = Core.add_5dasc_covs(df)
         df = Core.add_cytokine_covs(df)
+        df = Core.add_delta_PRL_covs(df)
         df = Core.add_demographic_covs(
             df,
             df_demo = pd.read_csv(os.path.join(
@@ -578,38 +581,6 @@ class Core():
 
 
     @staticmethod
-    def add_CANTAB_meanZ(df):
-        """ Calculates z-score for each CANTAB outcome and then calculates
-            mean z-score across measures for each test.
-            This mean z-score across the test's measures is saved as Z_{test name}
-        """
-
-        for test in config.cantab_measures.keys():
-            tmp = df[df['measure'].isin(config.cantab_measures[test])].copy()
-            tmp = pd.pivot_table(tmp, index=['tp','pID'], columns='measure', values= 'score')
-            tmp.columns.name = None
-            tmp = tmp.reset_index()
-
-            for measure in config.cantab_measures[test]:
-                tmp[f'Z_{measure}'] = zscore(tmp[measure], nan_policy='omit')
-                del tmp[measure]
-
-                if measure in ['PALFAMS', 'OTSPSFC', 'MTSCFAPC']:
-                    # For these scales greater scores are better (lower is better for all others)
-                    # Flipping these scales so that improvement=lower scores for all scales
-                    tmp[f'Z_{measure}'] = (-1)*tmp[f'Z_{measure}'].copy()
-
-            tmp[f'Z_{test}'] = round(tmp[tmp.filter(like='Z_').columns].mean(axis=1),3)
-            tmp = tmp[['pID', 'tp', f'Z_{test}']]
-            tmp['measure'] = f'Z_{test}'
-            tmp['test'] = f'Z_{test}'
-            tmp = tmp.rename(columns={f'Z_{test}': 'score'})
-
-            df = pd.concat([df, tmp])
-
-        return df
-
-    @staticmethod
     def add_demographic_covs(df, df_demo):
 
         score_idx = df_demo.columns.get_loc('score')
@@ -626,7 +597,8 @@ class Core():
 
     @staticmethod
     def add_severity_covs(df):
-        """ Add UPDRS_3 as bsl_severity measure """
+        """ Add UPDRS_3 baseline as 'severity' measure
+        """
 
         col_idx = df.columns.get_loc('score')
         for pID in df.pID.unique():
@@ -640,6 +612,26 @@ class Core():
 
             bsl_val = df.iloc[row_idx[0], col_idx]
             df.loc[(df.pID==pID), 'severity'] = bsl_val
+
+        return df
+
+    @staticmethod
+    def add_delta_PRL_covs(df):
+
+        col_idx = df.columns.get_loc('delta_score')
+
+        for pID, tp in product(df.pID.unique(), ['A7', 'B7', 'B30']):
+
+            row_idx = df.loc[
+                (df.pID==pID) &
+                (df.measure=='PRL') &
+                (df.tp==tp)].index
+
+            if len(row_idx)==0:
+                continue
+
+            assert len(row_idx)==1
+            df.loc[(df.pID==pID), f'PRL_delta_{tp}'] = df.iloc[row_idx[0], col_idx]
 
         return df
 
@@ -697,9 +689,116 @@ class Core():
 
             assert tmp.shape[0]==1
             delta_value = df_cytokine.iloc[tmp.index[0], delta_score_idx]
-            df.loc[df['pID']==pID, f'delta_{tp}_{measure}'] = delta_value
+            df.loc[df['pID']==pID, f'{measure}_delta_{tp}'] = delta_value
 
         return df
+
+    @staticmethod
+    def add_CANTAB_meanZ(df):
+        """ Calculates z-score for each CANTAB outcome and then calculates
+            mean z-score across measures for each test.
+            This mean z-score across the test's measures is saved as Z_{test name}
+        """
+
+        for test in config.cantab_measures.keys():
+            tmp = df[df['measure'].isin(config.cantab_measures[test])].copy()
+            tmp = pd.pivot_table(tmp, index=['tp','pID'], columns='measure', values= 'score')
+            tmp.columns.name = None
+            tmp = tmp.reset_index()
+
+            for measure in config.cantab_measures[test]:
+                tmp[f'Z_{measure}'] = zscore(tmp[measure], nan_policy='omit')
+                del tmp[measure]
+
+                if measure in ['PALFAMS', 'OTSPSFC', 'MTSCFAPC']:
+                    # For these scales greater scores are better (lower is better for all others)
+                    # Flipping these scales so that improvement=lower scores for all scales
+                    tmp[f'Z_{measure}'] = (-1)*tmp[f'Z_{measure}'].copy()
+
+            tmp[f'Z_{test}'] = round(tmp[tmp.filter(like='Z_').columns].mean(axis=1),3)
+            tmp = tmp[['pID', 'tp', f'Z_{test}']]
+            tmp['measure'] = f'Z_{test}'
+            tmp['test'] = f'Z_{test}'
+            tmp = tmp.rename(columns={f'Z_{test}': 'score'})
+
+            df = pd.concat([df, tmp])
+
+        return df
+
+    @staticmethod
+    def get_corrmats_df(df, out_dir=folders.corrmats):
+
+        predictors = [
+            'severity', 'age', 'LED',
+            '11d_util', '11d_sprit', '11d_bliss', '11d_insight', '11d_dis', '11d_imp', '11d_anx', '11d_cimg', '11d_eimg', '11d_av', '11d_per', '11d_MEAN',
+            'IFN_gamma_delta_A1', 'IFN_gamma_delta_B1', 'IFN_gamma_delta_B30',
+            'IL6_delta_A1', 'IL6_delta_B1', 'IL6_delta_B30',
+            'IL8_delta_A1', 'IL8_delta_B1', 'IL8_delta_B30',
+            'IL10_delta_A1', 'IL10_delta_B1', 'IL10_delta_B30',
+            'TNF_alpha_delta_A1', 'TNF_alpha_delta_B1', 'TNF_alpha_delta_B30',
+            'PRL_delta_A7', 'PRL_delta_B7', 'PRL_delta_B30',]
+
+        outcomes = [
+            'UPDRS_1', 'UPDRS_2', 'UPDRS_3','UPDRS_4',
+            'HAMA', 'MADRS', 'ESAPS', 'CCFQ',
+            'Z_MTS', 'Z_OTS', 'Z_PAL', 'Z_RTI', 'Z_SWM',]
+
+        for method, tp in product(['pearson', 'spearman', 'kendall'], ['A7', 'B7', 'B30']):
+
+            coeffs_df = pd.DataFrame(columns=outcomes, index=predictors)
+            pvalues_df = pd.DataFrame(columns=outcomes, index=predictors)
+
+            for outcome, predictor in product(outcomes, predictors):
+
+                tmp = df.loc[(df.measure==outcome) & (df.tp==tp)][[predictor, 'delta_score']]
+                tmp = tmp.dropna()
+
+                if method == 'pearson':
+                    corcoeff, p = stats.pearsonr(tmp['delta_score'], tmp[predictor])
+                elif method == 'spearman':
+                    corcoeff, p = stats.spearmanr(tmp['delta_score'], tmp[predictor])
+                elif method == 'kendall':
+                    corcoeff, p = stats.kendalltau(tmp['delta_score'], tmp[predictor])
+
+                coeffs_df.at[predictor, outcome] = corcoeff
+                pvalues_df.at[predictor, outcome] = p
+
+            ### Save results
+            coeffs_df.to_csv(os.path.join(folders.corrmats, f'coeffs_{method}_{tp}.csv'))
+            pvalues_df.to_csv(os.path.join(folders.corrmats, f'pvalues_{method}_{tp}.csv'))
+
+            ### Make figures
+            # Use 11d asc
+            plots.Controllers.make_corrmat(
+                coeffs_df, pvalues_df, method, tp,
+                pred_set = [
+                    '11d_util',
+                    '11d_sprit',
+                    '11d_bliss',
+                    '11d_insight',
+                    '11d_dis',
+                    '11d_imp',
+                    '11d_anx',
+                    '11d_cimg',
+                    '11d_eimg',
+                    '11d_av',
+                    '11d_per',
+                    '11d_MEAN'],
+                out_fname='corrmat_11dasc')
+
+            # Use everything else
+            plots.Controllers.make_corrmat(
+                coeffs_df, pvalues_df, method, tp,
+                pred_set = [
+                    'severity', 'age', 'LED',
+                    'IFN_gamma_delta_A1', 'IFN_gamma_delta_B1',
+                    'IL6_delta_A1', 'IL6_delta_B1',
+                    'IL8_delta_A1', 'IL8_delta_B1',
+                    'IL10_delta_A1', 'IL10_delta_B1',
+                    'TNF_alpha_delta_A1', 'TNF_alpha_delta_B1',
+                    'PRL_delta_A7', 'PRL_delta_B7', 'PRL_delta_B30'],
+                out_fname='corrmat')
+
 
 
 class Analysis():

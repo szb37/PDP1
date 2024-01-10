@@ -20,20 +20,15 @@ cantab_measures={
   'SWM': ['SWMBE12','SWMBE4','SWMBE468','SWMBE6','SWMBE8','SWMS'], # Executive Function
 }
 
-corr_types = {
-    'pearson':{
-        'est': 'pearson_cor',
-        'p': 'pearson_p',
-        'sig': 'pearson_sig'
-    },
-    'spearman':{
-        'est': 'spearman_rho',
-        'p': 'spearman_p',
-        'sig': 'spearman_sig'
-    },
-    'kendall':{
-        'est': 'kendall_tau',
-        'p': 'kendall_p',
-        'sig': 'kendall_sig'
-    },
-}
+all_outcomes = [
+    'UPDRS_1', 'UPDRS_2', 'UPDRS_3', 'UPDRS_4', 'UPDRS_SUM',
+    'HAMA', 'MADRS', 'NPIQ_DIS', 'NPIQ_SEV',  'CSSRS', 'ESAPS', 'CCFQ',
+    'PRL', 'Z_MTS', 'Z_OTS', 'Z_PAL', 'Z_RTI', 'Z_SWM',
+    'MTSCFAPC', 'MTSPS82', 'MTSRCAMD', 'MTSRFAMD', 'OTSMDLFC', 'OTSPSFC',
+    'PALFAMS', 'PALTEA', 'RTIFMDMT', 'RTIFMDRT', 'RTISMDMT', 'RTISMDRT',
+    'SWMBE12', 'SWMBE4', 'SWMBE468', 'SWMBE6', 'SWMBE8', 'SWMS',]
+
+outcomes = [
+    'UPDRS_1', 'UPDRS_2', 'UPDRS_3', 'UPDRS_4', 'UPDRS_SUM',
+    'HAMA', 'MADRS', 'NPIQ_DIS', 'NPIQ_SEV',  'CSSRS', 'ESAPS', 'CCFQ',
+    'PRL', 'Z_MTS', 'Z_OTS', 'Z_PAL', 'Z_RTI', 'Z_SWM',]

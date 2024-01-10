@@ -18,9 +18,14 @@ if False: # create master DF from raw data files
 if False: # create vitals DF from raw data files
     df_vitals = core.DataWrangl.get_vitals_df()
 
-if True: # create master DF with all potential bsl covariates
-    df = core.DataWrangl.add_covs_df(
+if False: # create master DF with all potential bsl covariates
+    df_wcovs = core.DataWrangl.add_covs_df(
         df = pd.read_csv(os.path.join(folders.exports, 'pdp1_data_master.csv')),)
+
+if True: # calculate corrmats
+
+    core.Core.get_corrmats_df(
+        df = pd.read_csv(os.path.join(folders.exports, 'pdp1_data_wcovs.csv')),)
 
 
 """ plots """
@@ -34,23 +39,20 @@ if False: # make histograms
 
     plots.Controllers.make_histograms(
         df=pd.read_csv(
-            os.path.join(folders.data, 'pdp1_MASTER.csv')))
+            os.path.join(folders.exports, 'pdp1_data_master.csv')))
 
 if False: # make ind time evolution plots
 
     plots.Controllers.make_ind_timeevols(
         df=pd.read_csv(
-            os.path.join(folders.data, 'pdp1_MASTER.csv')),
+            os.path.join(folders.exports, 'pdp1_data_master.csv')),
             out_dir=folders.ind_timeevols)
 
 if False: # make agg time evolution plots
 
     plots.Controllers.make_agg_timeevols(
         df=pd.read_csv(
-            os.path.join(folders.data, 'pdp1_MASTER.csv')),
-            errorbar_corr = True,
-            boost_y = False,
-            out_dir = folders.agg_timeevols)
+            os.path.join(folders.exports, 'pdp1_data_master.csv')),)
 
 if False: # make 5DASC comparison plots
 
@@ -58,29 +60,6 @@ if False: # make 5DASC comparison plots
         df=pd.read_csv(os.path.join(folders.data, 'pdp1_5dasc.csv')),
         out_dir=folders.fivedasc,
         horizontal=False)
-
-if False: # make cytokine correlation matrix
-
-    plots.Controllers.make_cytokine_corrmat(
-        df=pd.read_csv(os.path.join(folders.exports, 'pdp1_cytokine_delta_corrmat.csv')),)
-
-if False: # make bsl predictors correlation matrix
-
-    plots.Controllers.make_bslpreds_corrmat(
-        df = pd.read_csv(os.path.join(folders.exports, 'pdp1_bslpreds_delta_corrmat.csv')),
-        filename = 'corrmat_bslpreds_delta',
-        tp = 'B7')
-
-    plots.Controllers.make_bslpreds_corrmat(
-        df = pd.read_csv(os.path.join(folders.exports, 'pdp1_bslpreds_delta_corrmat.csv')),
-        filename = 'corrmat_bslpreds_delta',
-        tp = 'B30')
-
-if False: # make 5DASC correlation matrix
-
-    plots.Controllers.make_5dasc_corrmat(
-        df = pd.read_csv(os.path.join(folders.data, 'pdp1_5dasc.csv')),
-        filename = 'corrmat_5dasc_delta',)
 
 
 """ analysis """
@@ -102,4 +81,4 @@ if False: # make observed scores table
 
     core.Analysis.observed_scores_df(
         df=pd.read_csv(
-            os.path.join(folders.data, 'pdp1_MASTER.csv')),)
+            os.path.join(folders.exports, 'pdp1_data_master.csv')),)

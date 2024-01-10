@@ -1,0 +1,6 @@
+- 'LED' is Levodopa intake in mg at baseline
+- 'severity' is quantified by UPDRS3 at baseline
+- For all 11dasc dimensions, data in the correlation is the avg of A0 and B0 measure; i.e. average of the two drug sessions
+- '11d_MEAN': is the mean across all 11 dimensions of 11dasc
+- All clinical outcomes are change scores, see bottom of plots, i.e. 'B30-baseline' is the change change score from baseline to B30
+- cytokine data is always change score, e.g. 'IL6_delta_A1' is the change scroe from baseline to A1; PRL change score is encoded simillarly
