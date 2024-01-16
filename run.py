@@ -15,7 +15,7 @@ import os
 if False: # create master DF from raw data files
     df = core.DataWrangl.get_master_df()
 
-if True: # create vitals DF from raw data files
+if False: # create vitals DF from raw data files
     df_vitals = core.DataWrangl.get_vitals_df()
 
 if False: # create master DF with all potential bsl covariates
@@ -48,11 +48,12 @@ if False: # make ind time evolution plots
             os.path.join(folders.exports, 'pdp1_data_master.csv')),
             out_dir=folders.ind_timeevols)
 
-if False: # make agg time evolution plots
+if True: # make agg time evolution plots
 
     plots.Controllers.make_agg_timeevols(
         df=pd.read_csv(
-            os.path.join(folders.exports, 'pdp1_data_master.csv')),)
+            os.path.join(folders.exports, 'pdp1_data_master.csv')),
+        out_dir = folders.tmp)
 
 if False: # make 5DASC comparison plots
 

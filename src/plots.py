@@ -9,6 +9,8 @@ import numpy as np
 import math
 import os
 
+#plt.rcParams['font.weight'] = 'bold'
+
 class Controllers():
 
     @staticmethod
@@ -53,12 +55,13 @@ class Controllers():
     def make_agg_timeevols(df, measures=config.outcomes, errorbar_corr=True, out_dir=folders.agg_timeevols):
 
         has_B90=['HAMA', 'MADRS', 'NPIQ_SEV', 'NPIQ_DIS']
+        sns.set_context("paper", font_scale=1.75)
 
         for measure in measures:
 
             print(f'Create AGG timeevol plot: {measure}; errorbar_corr: {errorbar_corr}')
 
-            fig = plt.figure(figsize=((6.4, 4.8)))
+            fig = plt.figure(figsize=((4.8, 6.4)))
             ax = fig.add_subplot(1, 1, 1)
 
             df_measure = df.loc[(df.measure==measure)].copy()
@@ -94,9 +97,9 @@ class Controllers():
             else:
                 intervals = [0, 24, 24+14, 24+14-7+30]
                 ax.set_xticks(intervals)
-                plt.xticks(intervals, ['Baseline', 'A7', 'B7', 'B30'])
+                plt.xticks(intervals, ['Baseline', '7d post 10mg', '7d post 25mg', '30d post 25mg'])
 
-            ax.set_ylabel(measure, fontdict=config.axislabel_fontdict)
+            ax.set_ylabel(measure)
             ax = Helpers.set_yaxis(measure, ax, boost_y=False)
             ax.set_xlabel('')
 
@@ -104,13 +107,13 @@ class Controllers():
             ax.xaxis.grid(False)
 
             sns.despine(top=True, right=True, left=False, bottom=False, offset=10, trim=True)
-            ax.tick_params(axis='both', which='major', labelsize=config.ticklabel_fontsize)
+            #ax.tick_params(axis='both', which='major', labelsize=config.ticklabel_fontsize)
             plt.setp(ax.get_xticklabels(), rotation=35, ha="right", rotation_mode="anchor")
 
             Helpers.save_fig(
                 fig = fig,
                 out_dir = out_dir,
-                filename = f'pdp1_agg_timeevol_{measure}')
+                filename = f'pdp1_agg_timeevol_{measure}_scale1.75')
 
     @staticmethod
     def make_ind_timeevols(df, measures=config.outcomes, out_dir=folders.ind_timeevols):
@@ -413,12 +416,12 @@ class Helpers:
         elif measure=='ESAPS':
             ax.set_yticks([-1, 0, 1, 2, 3, 4])
         elif measure=='Z_PAL':
-            ax.set_ylabel('Associate learning (PAL z-score)', fontdict=config.axislabel_fontdict)
+            ax.set_ylabel('Associate learning (PAL z-score)') #, fontweight='bold'
         elif measure=='Z_SWM':
-            ax.set_ylabel('Working memory (SWM z-score)', fontdict=config.axislabel_fontdict)
+            ax.set_ylabel('Working memory (SWM z-score)')
         elif measure=='PRL':
             ax.set_yticks([2, 4, 6, 8])
-            ax.set_ylabel('Reversal learning (PRL)', fontdict=config.axislabel_fontdict)
+            ax.set_ylabel('Reversal learning (# of reversals)')
         else:
             ax.set_ylabel('Score', fontdict=config.axislabel_fontdict)
 
