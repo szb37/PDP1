@@ -31,6 +31,7 @@ class DataWrangl():
         Core.get_cytokine_df()
         Core.get_5dasc_df()
         Core.get_demographic_df()
+        Core.get_tsq_df()
 
         df_clinical = pd.read_csv(os.path.join(folders.data, 'pdp1_clinical.csv'))
         df_cantab = pd.read_csv(os.path.join(folders.data, 'pdp1_cantab.csv'))
@@ -40,6 +41,7 @@ class DataWrangl():
         df_psychq = pd.read_csv(os.path.join(folders.data, 'pdp1_psychq.csv'))
         df_cytokine = pd.read_csv(os.path.join(folders.data, 'pdp1_cytokine.csv'))
         df_5dasc = pd.read_csv(os.path.join(folders.data, 'pdp1_5dasc.csv'))
+        df_tsq = pd.read_csv(os.path.join(folders.data, 'pdp1_tsq.csv'))
 
         df_master = pd.concat([
             df_cantab,
@@ -49,7 +51,8 @@ class DataWrangl():
             df_npiq,
             df_psychq,
             df_cytokine,
-            df_5dasc,], ignore_index=True)
+            df_5dasc,
+            df_tsq,], ignore_index=True)
 
         df_master['pID'] = df_master['pID'].astype(int)
         df_master = df_master.reset_index(drop=True)
@@ -133,15 +136,37 @@ class Core():
 
     @staticmethod
     def get_5dasc_df(out_dir=folders.data, out_fname='pdp1_5dasc.csv'):
+        """
+        ASC (Dittrich, 1998) can be divided into either 5 (Dittrich, 1998) (94 items), or 11 dimensions (Studerus et al., 2010) (42 items), these are 2 ways to analyze the dataset.
+        Here we use the 11d representation due to its better psychometric properties.
+        """
 
         df = Helpers.get_REDCap_export()
-
-        boundless_items = [
+        asc_items = [
             "fivedasc_util_total",
-            "fivedasc_sprit_total",  ## note misnamed column here
+            "fivedasc_sprit_total",
             "fivedasc_bliss_total",
             "fivedasc_insight_total",
-        ]
+            "fivedasc_dis_total",
+            "fivedasc_imp_total",
+            "fivedasc_anx_total",
+            "fivedasc_cimg_total",
+            "fivedasc_eimg_total",
+            "fivedasc_av_total",
+            "fivedasc_per_total",]
+        df = df[['tp', 'pID'] + asc_items]
+        df = df.dropna(subset = asc_items, how='all')
+
+
+        '''
+        # These 3 dimensions below are from the 5d representation of the ASC. Not planning to use these, but leaving here just in case
+        # To get the 2 missing dimensions of the 5dASC, the raw redcap data must be reanalyzed at item level
+
+        boundless_items =[
+                    "fivedasc_util_total",
+                    "fivedasc_sprit_total",
+                    "fivedasc_bliss_total",
+                    "fivedasc_insight_total",]
         anxEgoDis_items = [
             "fivedasc_dis_total",
             "fivedasc_imp_total",
@@ -154,8 +179,11 @@ class Core():
             "fivedasc_per_total"
         ]
 
-        df = df[['tp', 'pID'] + boundless_items + anxEgoDis_items + visual_items]
-        df = df.dropna(subset=boundless_items + anxEgoDis_items + visual_items, how='all')
+        # create 3 summary columns that are the averages of the 3 major factors - these are what we'll do our statistics on
+        df['boundless'] = df[boundless_items].mean(axis=1)
+        df['anxiousEgo'] = df[anxEgoDis_items].mean(axis=1)
+        df['visionary'] = df[visual_items].mean(axis=1)
+        '''
 
         # Normalize these "total" columns by the # of questions that made up the total, so that they become
         # the average of the questions that make them up, rather than the total
@@ -171,45 +199,29 @@ class Core():
         # Audio-Visual Synesthesia 5D-ASC: (20, 23, 75) = 3 questions
         # Changed Meaning of Percepts  5D-ASC: (28, 31, 54) = 3 questions
 
-        df['fivedasc_util_total'] = df['fivedasc_util_total'] / 5
-        df['fivedasc_sprit_total'] = df['fivedasc_sprit_total'] / 3
-        df['fivedasc_bliss_total'] = df['fivedasc_bliss_total'] / 3
-        df['fivedasc_insight_total'] = df['fivedasc_insight_total'] / 3
-        df['fivedasc_dis_total'] = df['fivedasc_dis_total'] / 3
-        df['fivedasc_imp_total'] = df['fivedasc_imp_total'] / 7
-        df['fivedasc_anx_total'] = df['fivedasc_anx_total'] / 6
-        df['fivedasc_cimg_total'] = df['fivedasc_cimg_total'] / 3
-        df['fivedasc_eimg_total'] = df['fivedasc_eimg_total'] / 3
-        df['fivedasc_av_total'] = df['fivedasc_av_total'] / 3
-        df['fivedasc_per_total'] = df['fivedasc_per_total'] / 3
-        df['fivedasc_MEAN_total'] = df[boundless_items + anxEgoDis_items + visual_items].mean(axis=1)
+        df['unity'] = df['fivedasc_util_total'] / 5
+        df['spirit'] = df['fivedasc_sprit_total'] / 3
+        df['bliss'] = df['fivedasc_bliss_total'] / 3
+        df['insight'] = df['fivedasc_insight_total'] / 3
+        df['disem'] = df['fivedasc_dis_total'] / 3
+        df['impcc'] = df['fivedasc_imp_total'] / 7
+        df['anx'] = df['fivedasc_anx_total'] / 6
+        df['cimg'] = df['fivedasc_cimg_total'] / 3
+        df['eimg'] = df['fivedasc_eimg_total'] / 3
+        df['avs'] = df['fivedasc_av_total'] / 3
+        df['chmper'] = df['fivedasc_per_total'] / 3
+        df['MEAN'] = df[['unity','spirit','bliss','insight','disem','impcc','anx','cimg','eimg','avs','chmper',]].mean(axis=1)
 
-        # create 3 summary columns that are the averages of the 3 major factors - these are what we'll do our statistics on
-        #df['3d_boundless'] = df[boundless_items].mean(axis=1)
-        #df['3d_anxiousEgo'] = df[anxEgoDis_items].mean(axis=1)
-        #df['3d_visionary'] = df[visual_items].mean(axis=1)
+        df = df.drop(columns=asc_items)
 
         df = df.melt(
             id_vars = ['pID', 'tp'],
-            value_vars = boundless_items + \
-                anxEgoDis_items + \
-                visual_items + \
-                ['fivedasc_MEAN_total'] #, '3d_boundless', '3d_anxiousEgo', '3d_visionary']
-        )
-
-        df = df.rename(columns={
-            'value': 'score',
-            'variable': 'measure'})
+            var_name = 'measure',
+            value_name = 'score',)
 
         df = df.dropna(subset='score')
-        df['test'] = '5dasc'
-
-        # Get rid of long 5dasc dim names
-        tmp = df['measure'].copy()
-        tmp = tmp.str.replace('fivedasc_', '11d_')
-        tmp = tmp.str.replace('_total', '')
-        df['measure'] = tmp
-        df['score'] = round(df['score'],1)
+        df['score'] = round(df['score'], 2)
+        df['test'] = '11dasc'
 
         df.to_csv(os.path.join(out_dir, out_fname), index=False)
         return df
@@ -579,6 +591,36 @@ class Core():
         df.to_csv(os.path.join(out_dir, out_fname), index=False)
         return df
 
+    @staticmethod
+    def get_tsq_df(out_dir=folders.data, out_fname='pdp1_tsq.csv'):
+
+
+        df = Helpers.get_REDCap_export()
+
+        cols = [col for col in df.columns if (
+            ('tsq' in col) and
+            ('_ra_check' not in col) and
+            ('_date' not in col) and
+            ('_total_missing' not in col) and
+            ('_6' not in col) and # 6,7,8 are text responses
+            ('_7' not in col) and
+            ('_8' not in col) and
+            ('_complete' not in col))]
+
+        df = df[['pID', 'tp'] + cols]
+        df = df.dropna(subset=cols, how='all')
+
+        df = df.melt(
+            id_vars = ['pID','tp'],
+            value_name = 'score',
+            var_name = 'measure')
+
+        df['test'] = 'TSQ'
+
+        df = Helpers.standardize_df(df)
+        df.to_csv(os.path.join(out_dir, out_fname), index=False)
+        return df
+
 
     @staticmethod
     def add_demographic_covs(df, df_demo):
@@ -798,7 +840,6 @@ class Core():
                     'TNF_alpha_delta_A1', 'TNF_alpha_delta_B1',
                     'PRL_delta_A7', 'PRL_delta_B7', 'PRL_delta_B30'],
                 out_fname='corrmat')
-
 
 
 class Analysis():

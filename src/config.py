@@ -7,7 +7,7 @@ axislabel_fontdict = {'fontsize': 20, 'fontweight': 'bold'}
 ticklabel_fontsize = 14
 
 savePNG=True
-saveSVG=False
+saveSVG=True
 
 valid_pIDs=[1002,1020,1034,1047,1051,1055,1083,1085,1086,1129,1142,1145]
 valid_str_pIDs=['1002','1020','1034','1047','1051','1055','1083','1085','1086','1129','1142','1145']

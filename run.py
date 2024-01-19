@@ -48,7 +48,7 @@ if False: # make ind time evolution plots
             os.path.join(folders.exports, 'pdp1_data_master.csv')),
             out_dir=folders.ind_timeevols)
 
-if True: # make agg time evolution plots
+if False: # make agg time evolution plots
 
     plots.Controllers.make_agg_timeevols(
         df=pd.read_csv(
@@ -59,8 +59,15 @@ if False: # make 5DASC comparison plots
 
     plots.Controllers.make_5dasc(
         df=pd.read_csv(os.path.join(folders.data, 'pdp1_5dasc.csv')),
-        out_dir=folders.fivedasc,
-        horizontal=False)
+        out_dir=folders.fivedasc,)
+
+if True: # make TSQ plot
+
+    plots.Controllers.make_tsq(
+        df=pd.read_csv(os.path.join(folders.data, 'pdp1_tsq.csv')),
+        out_dir=folders.tsq)
+
+
 
 
 """ analysis """

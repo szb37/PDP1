@@ -1,15 +1,13 @@
 from itertools import product
 import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-import src.config as config
 import src.folders as folders
+import src.config as config
+#import matplotlib.patches as patches
 import seaborn as sns
 import pandas as pd
 import numpy as np
 import math
 import os
-
-#plt.rcParams['font.weight'] = 'bold'
 
 class Controllers():
 
@@ -228,71 +226,43 @@ class Controllers():
                 filename = f'vitals_{measure}')
 
     @staticmethod
-    def make_5dasc(df, out_dir=folders.exports, horizontal=False):
-
-        assert isinstance(horizontal, bool)
-
-        df = df[df['measure'].str.contains('fivedasc_')]
-        tmp = df['measure'].copy()
-        tmp = tmp.str.replace('fivedasc_', '')
-        tmp = tmp.str.replace('_total', '')
-        df['measure'] = tmp
+    def make_5dasc(df, out_dir=folders.exports):
 
         df = df.replace({
-            'util': 'Experience\nof unity',
-            'sprit': 'Spiritual\nexperience',
+            'unity': 'Experience\nof unity',
+            'spirit': 'Spiritual\nexperience',
             'bliss': 'Blissful\nstate',
             'insight': 'Insightfulness',
-            'dis': 'Disembodiment',
-            'imp': 'Impaired\ncontrol and cog.',
+            'disem': 'Disembodiment',
+            'impcc': 'Impaired\ncontrol and cog.',
             'anx': 'Anxiety',
             'cimg': ' Complex\nimagery',
             'eimg': 'Elementary\nimagery',
-            'av': 'Audio-Visual\nsynesthesia',
-            'per': 'Changed meaning\nof percepts',}, regex=True,)
+            'avs': 'Audio-Visual\nsynesthesia',
+            'chmper': 'Changed meaning\nof percepts',}, regex=True,)
 
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1)
 
-        if horizontal:
-            fig.set_size_inches([4*4.8, 2*4.8])
-            sns.barplot(
-                data=df,
-                x='measure',
-                y='score',
-                hue='tp',
-                palette = {
-                    'A0': '#56A0FB',
-                    'B0': '#F71480'},)
+        fig.set_size_inches([2*4.8, 4*4.8])
+        sns.barplot(
+            data=df,
+            y='measure',
+            x='score',
+            hue='tp',
+            errorbar="se",
+            capsize=0.15,
+            errwidth=0.95,
+            width=0.6,
+            palette = {
+                'A0': '#56A0FB',
+                'B0': '#F71480'},)
 
-            ax.set_yticks([0, 25, 50, 75, 100])
-            sns.despine(top=True, right=True, left=False, bottom=True)
-            ax.tick_params(axis='y', which='major', labelsize=config.ticklabel_fontsize)
-            ax.tick_params(axis='x', which='major', labelsize=13)
-            ax.set_ylabel('Score', fontdict=config.axislabel_fontdict)
-            ax.tick_params(axis='x', length=0)
-            ax.set_xlabel('')
-
-        else:
-            fig.set_size_inches([2*4.8, 4*4.8])
-            sns.barplot(
-                data=df,
-                y='measure',
-                x='score',
-                hue='tp',
-                errorbar="se",
-                capsize=0.15,
-                errwidth=0.95,
-                width=0.6,
-                palette = {
-                    'A0': '#56A0FB',
-                    'B0': '#F71480'},)
-
-            ax.set_xticks([0, 25, 50, 75, 100])
-            ax.tick_params(axis='both', which='major', labelsize=config.ticklabel_fontsize)
-            ax.set_xlabel('Score', fontdict=config.axislabel_fontdict)
-            ax.set_yticklabels(ax.get_yticklabels(), ha='center', va='center')
-            ax.set_ylabel('')
+        ax.set_xticks([0, 25, 50, 75, 100])
+        ax.tick_params(axis='both', which='major', labelsize=config.ticklabel_fontsize)
+        ax.set_xlabel('Score', fontdict=config.axislabel_fontdict)
+        ax.set_yticklabels(ax.get_yticklabels(), ha='center', va='center')
+        ax.set_ylabel('')
 
         # Collect handles and labels for the legend
         legend_handles = []
@@ -340,6 +310,136 @@ class Controllers():
             fig = fig,
             out_dir = out_dir,
             filename = f'{out_fname}_{tp}_{method}')
+
+    @staticmethod
+    def make_tsq(df, out_dir=folders.tsq):
+
+        del df['tp']
+        del df['test']
+        del df['pID']
+
+        tsqp_items = ['tsqp_1', 'tsqp_2', 'tsqp_3', 'tsqp_4', 'tsqp_5',]
+        tsqc_items = ['tsqc_1', 'tsqc_2', 'tsqc_3', 'tsqc_4', 'tsqc_5',]
+        items = tsqp_items + tsqc_items
+
+        df.replace(1.0, 'Strongly disagree', inplace=True)
+        df.replace(2.0, 'Disagree', inplace=True)
+        df.replace(3.0, 'Somewhat disagree', inplace=True)
+        df.replace(4.0, 'Neither agree nor disagree', inplace=True)
+        df.replace(5.0, 'Somewhat agree', inplace=True)
+        df.replace(6.0, 'Agree', inplace=True)
+        df.replace(7.0, 'Strongly agree', inplace=True)
+        df = df.loc[df.measure.isin(items)]
+
+        values = [
+            'Strongly disagree',
+            'Disagree',
+            'Somewhat disagree',
+            'Neither agree nor disagree',
+            'Somewhat agree',
+            'Agree',
+            'Strongly agree',]
+        dict = {
+            'item':[],
+            'Strongly disagree':[],
+            'Disagree':[],
+            'Somewhat disagree':[],
+            'Neither agree nor disagree':[],
+            'Somewhat agree':[],
+            'Agree':[],
+            'Strongly agree':[],}
+
+        ### Generate colormaps:
+        # cmap = sns.color_palette("coolwarm", as_cmap=True, n_colors=7)
+        # cmap = sns.color_palette('vlag', n_colors=7)
+        # hex_colors = [matplotlib.colors.to_hex(color) for color in cmap]
+
+        # vlag colormap
+        #colorkey = {
+        #    "Strongly disagree":"#bf6765",
+        #    "Disagree":"#d39794",
+        #    "Somewhat disagree":"#e7c8c6",
+        #    "Neither agree nor disagree":"#faf5f4",
+        #    "Somewhat agree":"#cfd4e0",
+        #    "Agree":"#9baecb",
+        #    "Strongly agree":"#678bbe"}
+
+        # coolwarm
+        colorkey = {
+            "Strongly disagree":"#dd5f4b",
+            "Disagree":"#f4987a",
+            "Somewhat disagree":"#f5c4ac",
+            "Neither agree nor disagree":"#dddcdc",
+            "Somewhat agree":"#b9d0f9",
+            "Agree":"#8db0fe",
+            "Strongly agree":"#6282ea"}
+
+
+        for item in items:
+            dict['item'].append(item)
+            for value in values:
+                dict[value].append((df.loc[df.measure==item]['score']==value).sum())
+
+        counts = pd.DataFrame(dict)
+
+        counts_p = counts.loc[counts.item.isin(tsqp_items)]
+        counts_p = counts_p.replace('tsqp_1', 'Found treatment acceptable')
+        counts_p = counts_p.replace('tsqp_2', 'Satisfied with treatment')
+        counts_p = counts_p.replace('tsqp_3', 'Found treatment challenging')
+        counts_p = counts_p.replace('tsqp_4', 'Found treatment useful/helpful')
+        counts_p = counts_p.replace('tsqp_5', 'Would recommend')
+        counts_p.set_index('item', inplace=True)
+        counts_p.index.name=None
+
+        counts_c = counts.loc[counts.item.isin(tsqc_items)]
+        counts_c = counts_c.replace('tsqc_1', 'Found treatment acceptable')
+        counts_c = counts_c.replace('tsqc_2', 'Satisfied with treatment')
+        counts_c = counts_c.replace('tsqc_3', 'Found treatment challenging')
+        counts_c = counts_c.replace('tsqc_4', 'Found treatment useful/helpful')
+        counts_c = counts_c.replace('tsqc_5', 'Would recommend')
+        counts_c.set_index('item', inplace=True)
+        counts_c.index.name=None
+
+        ### Plot patient satisfaction
+        ax = counts_p.plot.barh(color=colorkey, stacked=True, fontsize=12)
+        fig = ax.get_figure()
+
+        ax.set_title("Patients' treatment satisfaction", fontsize=14)
+        ax.set_aspect(0.75)
+        sns.despine(top=True, right=True, left=False, bottom=True, offset=5, trim=True)
+
+        plt.xticks([3, 6, 9,], ['25%', '50%', '75%',])
+        #plt.axvline(x=3, color='gray', linestyle='--')
+        #plt.axvline(x=6, color='gray', linestyle='--')
+        #plt.axvline(x=9, color='gray', linestyle='--')
+
+        Helpers.save_fig(
+            fig = fig,
+            out_dir = out_dir,
+            filename = 'pdp1_tsq_patients')
+
+
+        ### Plot caregiver satisfaction
+        ax = counts_c.plot.barh(color=colorkey, stacked=True, fontsize=12)
+        fig = ax.get_figure()
+
+        ax.set_title("Caregivers' treatment satisfaction", fontsize=14)
+        ax.set_aspect(0.75)
+        sns.despine(top=True, right=True, left=False, bottom=True, offset=5, trim=True)
+
+        plt.xticks([3, 6, 9,], ['25%', '50%', '75%',])
+        #plt.axvline(x=3, color='gray', linestyle='--')
+        #plt.axvline(x=6, color='gray', linestyle='--')
+        #plt.axvline(x=9, color='gray', linestyle='--')
+
+        Helpers.save_fig(
+            fig = fig,
+            out_dir = out_dir,
+            filename = 'pdp1_tsq_caregivers')
+
+
+
+
 
 
 class Helpers:
