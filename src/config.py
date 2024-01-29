@@ -1,7 +1,9 @@
+import matplotlib
 import matplotlib.pyplot as plt
-#import seaborn as sns
 
 plt.rcParams.update({'font.family': 'arial'})
+plt.rcParams['svg.fonttype'] = 'none'  # Ensure fonts are embedded
+plt.rcParams['text.usetex'] = False  # Use TeX to handle text (embeds fonts)
 title_fontdict = {'fontsize': 20, 'fontweight': 'bold'}
 axislabel_fontdict = {'fontsize': 20, 'fontweight': 'bold'}
 ticklabel_fontsize = 14
@@ -31,4 +33,4 @@ all_outcomes = [
 outcomes = [
     'UPDRS_1', 'UPDRS_2', 'UPDRS_3', 'UPDRS_4', 'UPDRS_SUM',
     'HAMA', 'MADRS', 'NPIQ_DIS', 'NPIQ_SEV',  'CSSRS', 'ESAPS', 'CCFQ',
-    'PRL', 'Z_MTS', 'Z_OTS', 'Z_PAL', 'Z_RTI', 'Z_SWM',]
+    'PRL', 'Z_MTS', 'Z_OTS', 'Z_PAL', 'Z_RTI', 'Z_SWM', ]

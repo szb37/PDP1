@@ -2,64 +2,25 @@ from itertools import product
 import matplotlib.pyplot as plt
 import src.folders as folders
 import src.config as config
-#import matplotlib.patches as patches
+import matplotlib
 import seaborn as sns
 import pandas as pd
 import numpy as np
 import math
 import os
 
+
 class Controllers():
 
     @staticmethod
-    def make_histograms(df, ignore_measure=[], out_dir=folders.histograms):
-
-        for measure in config.measures:
-            print(f'Create HIST plot: {measure}')
-
-            if measure in ignore_measure:
-                continue
-
-            tmp_df = df.loc[(df.measure==measure)]
-            tps = tmp_df.tp.unique()
-            n_subplots = len(tps)
-
-            fig, axs = plt.subplots(
-                nrows=1,
-                ncols=n_subplots,
-                figsize=(n_subplots*4, 4))
-
-            for idx, tp in enumerate(tps):
-
-                ax = axs[idx]
-
-                sns.histplot(
-                    x='score', data=tmp_df.loc[(tmp_df.tp==tps[idx])],
-                    ax = ax)
-
-                ax.set_xlabel('Score', fontdict=config.axislabel_fontdict)
-                ax.set_ylabel('Count', fontdict=config.axislabel_fontdict)
-                ax.tick_params(axis='both', which='major', labelsize=config.ticklabel_fontsize)
-                ax.set_title(f'{measure} at {tp}', fontdict=config.title_fontdict)
-
-            plt.tight_layout()
-
-            Helpers.save_fig(
-                fig = fig,
-                out_dir = out_dir,
-                filename = f'histogram_{measure}')
-
-    @staticmethod
-    def make_agg_timeevols(df, measures=config.outcomes, errorbar_corr=True, out_dir=folders.agg_timeevols):
+    def make_agg_timeevols(df, measures=config.outcomes, out_dir=folders.agg_timeevols, errorbar_corr=True, save=True):
 
         has_B90=['HAMA', 'MADRS', 'NPIQ_SEV', 'NPIQ_DIS']
         sns.set_context("paper", font_scale=1.75)
 
         for measure in measures:
 
-            print(f'Create AGG timeevol plot: {measure}; errorbar_corr: {errorbar_corr}')
-
-            fig = plt.figure(figsize=((4.8, 6.4)))
+            fig = plt.figure(figsize=((4, 6.4)))
             ax = fig.add_subplot(1, 1, 1)
 
             df_measure = df.loc[(df.measure==measure)].copy()
@@ -73,29 +34,36 @@ class Controllers():
             if errorbar_corr:
                 df_measure = Helpers.apply_errorbar_correction(df_measure)
 
+            lw=2
             sns.lineplot(
                 x='tp',
                 y='score',
                 data=df_measure,
                 marker='o',
                 markersize=12,
-                color = '#00317f',
+                color='#00317f',
                 err_style="bars",
                 errorbar="ci",
+                linewidth=lw,
                 err_kws={
                     'capsize': 4,
                     'elinewidth': 0.75,
                     'capthick': 0.75})
 
             if measure in has_B90:
+                ### Enable line below to make x-axis proportional
+                fig.set_size_inches(7.1, 6.4)
                 intervals = [0, 24, 24+14, 24+14-7+30, 24+14-7+90]
                 ax.set_xticks(intervals)
                 plt.xticks(intervals, ['Baseline', 'A7', 'B7', 'B30', 'B90'])
-
             else:
                 intervals = [0, 24, 24+14, 24+14-7+30]
                 ax.set_xticks(intervals)
-                plt.xticks(intervals, ['Baseline', '7d post 10mg', '7d post 25mg', '30d post 25mg'])
+                plt.xticks(intervals, ['Baseline', 'A7', 'B7', 'B30',])
+
+            # Dose days
+            plt.axvline(x=17, color='gray', linestyle='--', linewidth=0.75)
+            plt.axvline(x=31, color='gray', linestyle='--', linewidth=0.75)
 
             ax.set_ylabel(measure)
             ax = Helpers.set_yaxis(measure, ax, boost_y=False)
@@ -104,20 +72,18 @@ class Controllers():
             ax.yaxis.grid(False)
             ax.xaxis.grid(False)
 
-            sns.despine(top=True, right=True, left=False, bottom=False, offset=10, trim=True)
-            #ax.tick_params(axis='both', which='major', labelsize=config.ticklabel_fontsize)
+            sns.despine(top=True, right=True, left=False, bottom=False,)
             plt.setp(ax.get_xticklabels(), rotation=35, ha="right", rotation_mode="anchor")
 
             Helpers.save_fig(
                 fig = fig,
                 out_dir = out_dir,
-                filename = f'pdp1_agg_timeevol_{measure}_scale1.75')
+                filename = f'pdp1_agg_timeevol_{measure}')
 
     @staticmethod
-    def make_ind_timeevols(df, measures=config.outcomes, out_dir=folders.ind_timeevols):
+    def make_ind_timeevols(df, measures=config.outcomes, out_dir=folders.ind_timeevols, save=True):
 
         for measure in measures:
-            print(f'Create IND timeevol plot: {measure}')
 
             fig = plt.figure()
             ax = fig.add_subplot(1, 1, 1)
@@ -142,21 +108,21 @@ class Controllers():
             plt.legend(bbox_to_anchor=(1, 1), loc='upper left')
             fig.set_size_inches([9.6, 4.8])
 
-            ax.xaxis.grid(False)
             ax.set_xlabel('Timepoint', fontdict=config.axislabel_fontdict)
             ax.set_ylabel('Score', fontdict=config.axislabel_fontdict)
             ax.tick_params(axis='both', which='major', labelsize=config.ticklabel_fontsize)
             ax.set_title(measure, fontdict=config.title_fontdict)
 
-            sns.despine(top=True, right=True, left=True, bottom=True)
+            sns.despine(top=True, right=True, left=False, bottom=False)
 
-            Helpers.save_fig(
-                fig = fig,
-                out_dir = out_dir,
-                filename = f'pdp1_ind_timeevol_{measure}')
+            if save:
+                Helpers.save_fig(
+                    fig = fig,
+                    out_dir = out_dir,
+                    filename = f'pdp1_ind_timeevol_{measure}')
 
     @staticmethod
-    def make_vitals(df, errorbar_corr=True, out_dir=folders.vitals):
+    def make_vitals(df, errorbar_corr=True, out_dir=folders.vitals, save=False):
 
         for measure in ['temp', 'dia', 'sys', 'hr']:
 
@@ -175,6 +141,7 @@ class Controllers():
                 markersize = 10,
                 legend = True,
                 style = 'tp',
+                linewidth=2,
                 markers = ["o", "D"],
                 palette = {
                     'A0': '#56A0FB',
@@ -187,7 +154,7 @@ class Controllers():
                     'capthick': 0.75},
             )
 
-            plt.legend(title='Psilocybin doses', labels=['10mg', '25mg'])
+            plt.legend(labels=['10mg', '25mg'])
 
             ax.set_xlabel('Time [min]', fontdict=config.axislabel_fontdict)
             ax.set_xticks([0, 30, 60, 90, 120, 240, 360, 420])
@@ -216,17 +183,18 @@ class Controllers():
                 assert False
 
             ax.tick_params(axis='both', which='major', labelsize=config.ticklabel_fontsize)
-            sns.despine(top=True, right=True, left=False, bottom=False, offset=10, trim=True)
+            sns.despine(top=True, right=True, left=False, bottom=False)
             ax.yaxis.grid(False)
             ax.xaxis.grid(False)
 
-            Helpers.save_fig(
-                fig = fig,
-                out_dir = out_dir,
-                filename = f'vitals_{measure}')
+            if save:
+                Helpers.save_fig(
+                    fig = fig,
+                    out_dir = out_dir,
+                    filename = f'vitals_{measure}')
 
     @staticmethod
-    def make_5dasc(df, out_dir=folders.exports):
+    def make_5dasc(df, out_dir=folders.exports, save=False):
 
         df = df.replace({
             'unity': 'Experience\nof unity',
@@ -278,10 +246,11 @@ class Controllers():
         ax.yaxis.grid(False)
         ax.xaxis.grid(False)
 
-        Helpers.save_fig(
-            fig = fig,
-            out_dir = out_dir,
-            filename = f'5dasc')
+        if save:
+            Helpers.save_fig(
+                fig = fig,
+                out_dir = out_dir,
+                filename = f'5dasc')
 
     @staticmethod
     def make_corrmat(coeffs_df, pvalues_df, method, tp, pred_set, out_dir=folders.corrmats, out_fname='corrmat'):
@@ -312,7 +281,7 @@ class Controllers():
             filename = f'{out_fname}_{tp}_{method}')
 
     @staticmethod
-    def make_tsq(df, out_dir=folders.tsq):
+    def make_tsq(df, out_dir=folders.tsq, save=False):
 
         del df['tp']
         del df['test']
@@ -349,12 +318,12 @@ class Controllers():
             'Agree':[],
             'Strongly agree':[],}
 
-        ### Generate colormaps:
+        ### Generate evenly spaced colors from colormaps:
         # cmap = sns.color_palette("coolwarm", as_cmap=True, n_colors=7)
         # cmap = sns.color_palette('vlag', n_colors=7)
         # hex_colors = [matplotlib.colors.to_hex(color) for color in cmap]
 
-        # vlag colormap
+        # hex_colors from vlag:
         #colorkey = {
         #    "Strongly disagree":"#bf6765",
         #    "Disagree":"#d39794",
@@ -364,7 +333,7 @@ class Controllers():
         #    "Agree":"#9baecb",
         #    "Strongly agree":"#678bbe"}
 
-        # coolwarm
+        # hex_colors fro coolwarm:
         colorkey = {
             "Strongly disagree":"#dd5f4b",
             "Disagree":"#f4987a",
@@ -373,7 +342,6 @@ class Controllers():
             "Somewhat agree":"#b9d0f9",
             "Agree":"#8db0fe",
             "Strongly agree":"#6282ea"}
-
 
         for item in items:
             dict['item'].append(item)
@@ -390,6 +358,7 @@ class Controllers():
         counts_p = counts_p.replace('tsqp_5', 'Would recommend')
         counts_p.set_index('item', inplace=True)
         counts_p.index.name=None
+        counts_p = counts_p.iloc[[2,0,1,3,4]]
 
         counts_c = counts.loc[counts.item.isin(tsqc_items)]
         counts_c = counts_c.replace('tsqc_1', 'Found treatment acceptable')
@@ -399,6 +368,8 @@ class Controllers():
         counts_c = counts_c.replace('tsqc_5', 'Would recommend')
         counts_c.set_index('item', inplace=True)
         counts_c.index.name=None
+        counts_c = counts_c.iloc[[2,0,1,3,4]]
+
 
         ### Plot patient satisfaction
         ax = counts_p.plot.barh(color=colorkey, stacked=True, fontsize=12)
@@ -409,37 +380,27 @@ class Controllers():
         sns.despine(top=True, right=True, left=False, bottom=True, offset=5, trim=True)
 
         plt.xticks([3, 6, 9,], ['25%', '50%', '75%',])
-        #plt.axvline(x=3, color='gray', linestyle='--')
-        #plt.axvline(x=6, color='gray', linestyle='--')
-        #plt.axvline(x=9, color='gray', linestyle='--')
-
         Helpers.save_fig(
             fig = fig,
             out_dir = out_dir,
             filename = 'pdp1_tsq_patients')
 
 
-        ### Plot caregiver satisfaction
+        ### Support persons' satisfaction
         ax = counts_c.plot.barh(color=colorkey, stacked=True, fontsize=12)
         fig = ax.get_figure()
 
-        ax.set_title("Caregivers' treatment satisfaction", fontsize=14)
+        ax.set_title("Support persons' treatment satisfaction", fontsize=14)
         ax.set_aspect(0.75)
         sns.despine(top=True, right=True, left=False, bottom=True, offset=5, trim=True)
 
         plt.xticks([3, 6, 9,], ['25%', '50%', '75%',])
-        #plt.axvline(x=3, color='gray', linestyle='--')
-        #plt.axvline(x=6, color='gray', linestyle='--')
-        #plt.axvline(x=9, color='gray', linestyle='--')
 
-        Helpers.save_fig(
-            fig = fig,
-            out_dir = out_dir,
-            filename = 'pdp1_tsq_caregivers')
-
-
-
-
+        if save:
+            Helpers.save_fig(
+                fig = fig,
+                out_dir = out_dir,
+                filename = 'pdp1_tsq_caregivers')
 
 
 class Helpers:
@@ -502,19 +463,20 @@ class Helpers:
             ax.set_yticks([5, 10, 15, 20])
             ax.set_ylabel('Motor EDL (UPDRS2)', fontdict=config.axislabel_fontdict)
         elif measure=='UPDRS_3':
-            ax.set_yticks([30, 35, 40])
+            ax.set_yticks([30, 32, 34, 36, 38, 40])
             ax.set_ylabel('Motor exam (UPDRS3)', fontdict=config.axislabel_fontdict)
+        elif measure=='UPDRS_4':
+            ax.set_yticks([0, 1, 2])
         elif measure=='MADRS':
-            ax.set_yticks([5, 10, 15, 20, 25, 30])
+            ax.set_yticks([5, 10, 15, 20, 25])
             ax.set_ylabel('Depression (MADRS)', fontdict=config.axislabel_fontdict)
-            #ax.add_patch(patches.Rectangle(
-            #	(-5, 19), 50, 30,
-            #	edgecolor=None, facecolor='blue', alpha=0.15))
+        elif measure=='CSSRS':
+            ax.set_yticks([0, 1, 2])
         elif measure=='HAMA':
             ax.set_yticks([5, 10, 15, 20])
             ax.set_ylabel('Anxiety (HAMA)', fontdict=config.axislabel_fontdict)
         elif measure=='ESAPS':
-            ax.set_yticks([-1, 0, 1, 2, 3, 4])
+            ax.set_yticks([0, 1, 2, 3, 4])
         elif measure=='Z_PAL':
             ax.set_ylabel('Associate learning (PAL z-score)') #, fontweight='bold'
         elif measure=='Z_SWM':

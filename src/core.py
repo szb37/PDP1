@@ -14,10 +14,10 @@ import copy
 import os
 
 
-class DataWrangl():
+class Controllers():
 
     @staticmethod
-    def get_master_df(out_dir=folders.exports, out_fname='pdp1_data_master.csv'):
+    def get_master_df(out_dir=folders.exports, out_fname='pdp1_data_master.csv', save=False):
         """ Creates and saves master DF from raw input data
         """
 
@@ -58,11 +58,13 @@ class DataWrangl():
         df_master = df_master.reset_index(drop=True)
         df_master = Helpers.get_deltas(df_master)
 
-        df_master.to_csv(os.path.join(out_dir, out_fname), index=False)
+        if save:
+            df_master.to_csv(os.path.join(out_dir, out_fname), index=False)
+
         return df_master
 
     @staticmethod
-    def get_vitals_df(out_dir=folders.exports, out_fname='pdp1_data_vitals.csv'):
+    def get_vitals_df(out_dir=folders.exports, out_fname='pdp1_data_vitals.csv', save=False):
 
         df = Helpers.get_REDCap_export()
 
@@ -112,11 +114,13 @@ class DataWrangl():
         i = (df['measure']=='temp') & (df['score']>60)
         df.loc[i, 'score'] = Helpers.fahrenheit_to_celsius(df.loc[i, 'score'])
 
-        df.to_csv(os.path.join(out_dir, out_fname), index=False)
+        if save:
+            df.to_csv(os.path.join(out_dir, out_fname), index=False)
+
         return df
 
     @staticmethod
-    def add_covs_df(df, out_dir=folders.exports, out_fname='pdp1_data_wcovs.csv'):
+    def add_covs_df(df, out_dir=folders.exports, out_fname='pdp1_data_wcovs.csv', save=False):
 
         df = Core.add_depanx_covs(df)
         df = Core.add_severity_covs(df)
@@ -128,7 +132,9 @@ class DataWrangl():
             df_demo = pd.read_csv(os.path.join(
                 folders.exports, 'pdp1_demography.csv')))
 
-        df.to_csv(os.path.join(out_dir, out_fname), index=False)
+        if save:
+            df.to_csv(os.path.join(out_dir, out_fname), index=False)
+
         return df
 
 
@@ -290,14 +296,51 @@ class Core():
 
         df = Helpers.get_REDCap_export()
 
+        # Illogical naming convention from Redcap:
+        # Items with 'ps' correspond to
+        post_bsl_freq = [f'psychq_{n}' for n in range(1,14)]
+        bsl_freq = [f'psychq_ps_{n}' for n in range(1,14)]
+        freq = bsl_freq+post_bsl_freq
+
+        post_bsl_severityerity = [f'psychq_{n}a' for n in range(1,14)]
+        bsl_severity = [f'psychq_ps_a{n}' for n in range(1,14)]
+        sev = bsl_severity + post_bsl_severityerity
+
+        # Fill up with zeros missing data at the appropiate timepoints for each column
+        df.loc[(df.tp!='bsl'), post_bsl_severityerity] = df.loc[(df.tp!='bsl'), post_bsl_severityerity].replace(np.nan, 0)
+        df.loc[(df.tp=='bsl'), bsl_severity] =df.loc[(df.tp=='bsl'), bsl_severity].replace(np.nan, 0)
+
+        keep_cols = ['pID', 'tp'] + freq + sev
+        df = df[keep_cols]
+        df = df.dropna(subset=freq, how='all')
+
+        # Copy over baseline values to freq and severity column
+        for n in range(1,14):
+
+            freq_n = f'psychq_{n}'
+            bsl_freq_n = f'psychq_ps_{n}'
+            sev_n = f'psychq_{n}a'
+            bsl_severity_n = f'psychq_ps_a{n}'
+
+            for index, row in df.iterrows():
+
+                if pd.isnull(row[freq_n]):
+                    df.at[index, freq_n] = row[bsl_freq_n]
+                    assert df.at[index, 'tp']=='bsl'
+                elif pd.notnull(row[freq_n]) and pd.notnull(row[bsl_freq_n]):
+                    assert df.at[index, freq_n]==row[bsl_freq_n]
+
+                if pd.isnull(row[sev_n]):
+                    df.at[index, sev_n] = row[bsl_severity_n]
+                    assert df.at[index, 'tp']=='bsl'
+                elif pd.notnull(row[sev_n]) and pd.notnull(row[bsl_severity_n]):
+                    assert df.at[index, sev_n]==row[bsl_severity_n]
+
+        # Get rid of columns with bsl values for clarity
         freq = [f'psychq_{n}' for n in range(1,14)]
         severity = [f'psychq_{n}a' for n in range(1,14)]
-
         keep_cols = ['pID', 'tp'] + freq + severity
         df = df[keep_cols]
-
-        df = df.dropna(subset=freq, how='all')
-        df[severity] = df[severity].replace(np.nan, 0)
 
         for idx, row in df.iterrows():
             df.loc[idx, 'PsychQ'] = sum([row[i]*row[j]  for i,j in zip(freq, severity)])
@@ -313,7 +356,6 @@ class Core():
             ignore_index=True)
 
         df['test']='PsychQ'
-
         df = Helpers.standardize_df(df)
         df.to_csv(os.path.join(out_dir, out_fname), index=False)
         return df
@@ -356,6 +398,14 @@ class Core():
 
         df['test'] = df['measure']
         df = Helpers.standardize_df(df)
+
+        # For 1034 there was internal disagreement between raters that was not
+        # resolved at the time data was recorded on REDCap. The consensus score
+        # of 14 was later agreed on, thus, manually adding consensus score here
+        df.loc[(df.pID==1034) &
+            (df.tp=='bsl') &
+            (df.measure=='HAMA'), 'score'] = 14
+
         df.to_csv(os.path.join(out_dir, out_fname), index=False)
         return df
 
@@ -426,7 +476,7 @@ class Core():
         return df
 
     @staticmethod
-    def get_demographic_df(out_dir=folders.exports, out_fname='pdp1_demography.csv'):
+    def get_demographic_df(out_dir=folders.exports, out_fname='pdp1_data_demography.csv'):
 
         df = pd.read_csv(os.path.join(
             folders.raw,
@@ -546,20 +596,6 @@ class Core():
         df4['UPDRS_4'] = df4[updrs4_cols].sum(axis=1, skipna=False)
         df4=df4[['pID', 'tp', 'UPDRS_4']].dropna()
 
-        # The following scores are missing in REDCap. After discussion w
-        # Ellen Bradley MD, these are not truly missing values,
-        # rather patients lacked symptoms, i.e. score should be 0.
-        missing_from_redcap = pd.DataFrame(
-            columns=['pID', 'tp', 'UPDRS_4'],
-            data=[
-                [1020, 'bsl', 0],
-                [1047, 'bsl', 0],
-                [1051, 'bsl', 0],
-                [1055, 'B30', 0],
-                [1142, 'A7', 0],])
-        df4 = pd.concat([df4, missing_from_redcap], ignore_index=True)
-        df4 = df4.drop_duplicates()
-
         ### Calculate UPDRS sum_scores
         df_sum = pd.concat([df1, df2, df3, df4], axis=0, ignore_index=True)
         df_sum = pd.melt(
@@ -619,6 +655,112 @@ class Core():
 
         df = Helpers.standardize_df(df)
         df.to_csv(os.path.join(out_dir, out_fname), index=False)
+        return df
+
+    @staticmethod
+    def get_corrmats_df(df, out_dir=folders.corrmats):
+
+        predictors = [
+            'severity', 'age', 'LED',
+            '11d_util', '11d_sprit', '11d_bliss', '11d_insight', '11d_dis', '11d_imp', '11d_anx', '11d_cimg', '11d_eimg', '11d_av', '11d_per', '11d_MEAN',
+            'IFN_gamma_delta_A1', 'IFN_gamma_delta_B1', 'IFN_gamma_delta_B30',
+            'IL6_delta_A1', 'IL6_delta_B1', 'IL6_delta_B30',
+            'IL8_delta_A1', 'IL8_delta_B1', 'IL8_delta_B30',
+            'IL10_delta_A1', 'IL10_delta_B1', 'IL10_delta_B30',
+            'TNF_alpha_delta_A1', 'TNF_alpha_delta_B1', 'TNF_alpha_delta_B30',
+            'PRL_delta_A7', 'PRL_delta_B7', 'PRL_delta_B30',]
+
+        outcomes = [
+            'UPDRS_1', 'UPDRS_2', 'UPDRS_3','UPDRS_4',
+            'HAMA', 'MADRS', 'ESAPS', 'CCFQ',
+            'Z_MTS', 'Z_OTS', 'Z_PAL', 'Z_RTI', 'Z_SWM',]
+
+        for method, tp in product(['pearson', 'spearman', 'kendall'], ['A7', 'B7', 'B30']):
+
+            coeffs_df = pd.DataFrame(columns=outcomes, index=predictors)
+            pvalues_df = pd.DataFrame(columns=outcomes, index=predictors)
+
+            for outcome, predictor in product(outcomes, predictors):
+
+                tmp = df.loc[(df.measure==outcome) & (df.tp==tp)][[predictor, 'delta_score']]
+                tmp = tmp.dropna()
+
+                if method == 'pearson':
+                    corcoeff, p = stats.pearsonr(tmp['delta_score'], tmp[predictor])
+                elif method == 'spearman':
+                    corcoeff, p = stats.spearmanr(tmp['delta_score'], tmp[predictor])
+                elif method == 'kendall':
+                    corcoeff, p = stats.kendalltau(tmp['delta_score'], tmp[predictor])
+
+                coeffs_df.at[predictor, outcome] = corcoeff
+                pvalues_df.at[predictor, outcome] = p
+
+            ### Save results
+            coeffs_df.to_csv(os.path.join(folders.corrmats, f'coeffs_{method}_{tp}.csv'))
+            pvalues_df.to_csv(os.path.join(folders.corrmats, f'pvalues_{method}_{tp}.csv'))
+
+            ### Make figures
+            # Use 11d asc
+            plots.Controllers.make_corrmat(
+                coeffs_df, pvalues_df, method, tp,
+                pred_set = [
+                    '11d_util',
+                    '11d_sprit',
+                    '11d_bliss',
+                    '11d_insight',
+                    '11d_dis',
+                    '11d_imp',
+                    '11d_anx',
+                    '11d_cimg',
+                    '11d_eimg',
+                    '11d_av',
+                    '11d_per',
+                    '11d_MEAN'],
+                out_fname='corrmat_11dasc')
+
+            # Use everything else
+            plots.Controllers.make_corrmat(
+                coeffs_df, pvalues_df, method, tp,
+                pred_set = [
+                    'severity', 'age', 'LED',
+                    'IFN_gamma_delta_A1', 'IFN_gamma_delta_B1',
+                    'IL6_delta_A1', 'IL6_delta_B1',
+                    'IL8_delta_A1', 'IL8_delta_B1',
+                    'IL10_delta_A1', 'IL10_delta_B1',
+                    'TNF_alpha_delta_A1', 'TNF_alpha_delta_B1',
+                    'PRL_delta_A7', 'PRL_delta_B7', 'PRL_delta_B30'],
+                out_fname='corrmat')
+
+    @staticmethod
+    def add_CANTAB_meanZ(df):
+        """ Calculates z-score for each CANTAB outcome and then calculates
+            mean z-score across measures for each test.
+            This mean z-score across the test's measures is saved as Z_{test name}
+        """
+
+        for test in config.cantab_measures.keys():
+            tmp = df[df['measure'].isin(config.cantab_measures[test])].copy()
+            tmp = pd.pivot_table(tmp, index=['tp','pID'], columns='measure', values= 'score')
+            tmp.columns.name = None
+            tmp = tmp.reset_index()
+
+            for measure in config.cantab_measures[test]:
+                tmp[f'Z_{measure}'] = zscore(tmp[measure], nan_policy='omit')
+                del tmp[measure]
+
+                if measure in ['PALFAMS', 'OTSPSFC', 'MTSCFAPC']:
+                    # For these scales greater scores are better (lower is better for all others)
+                    # Flipping these scales so that improvement=lower scores for all scales
+                    tmp[f'Z_{measure}'] = (-1)*tmp[f'Z_{measure}'].copy()
+
+            tmp[f'Z_{test}'] = round(tmp[tmp.filter(like='Z_').columns].mean(axis=1),3)
+            tmp = tmp[['pID', 'tp', f'Z_{test}']]
+            tmp['measure'] = f'Z_{test}'
+            tmp['test'] = f'Z_{test}'
+            tmp = tmp.rename(columns={f'Z_{test}': 'score'})
+
+            df = pd.concat([df, tmp])
+
         return df
 
 
@@ -735,117 +877,44 @@ class Core():
 
         return df
 
-    @staticmethod
-    def add_CANTAB_meanZ(df):
-        """ Calculates z-score for each CANTAB outcome and then calculates
-            mean z-score across measures for each test.
-            This mean z-score across the test's measures is saved as Z_{test name}
-        """
-
-        for test in config.cantab_measures.keys():
-            tmp = df[df['measure'].isin(config.cantab_measures[test])].copy()
-            tmp = pd.pivot_table(tmp, index=['tp','pID'], columns='measure', values= 'score')
-            tmp.columns.name = None
-            tmp = tmp.reset_index()
-
-            for measure in config.cantab_measures[test]:
-                tmp[f'Z_{measure}'] = zscore(tmp[measure], nan_policy='omit')
-                del tmp[measure]
-
-                if measure in ['PALFAMS', 'OTSPSFC', 'MTSCFAPC']:
-                    # For these scales greater scores are better (lower is better for all others)
-                    # Flipping these scales so that improvement=lower scores for all scales
-                    tmp[f'Z_{measure}'] = (-1)*tmp[f'Z_{measure}'].copy()
-
-            tmp[f'Z_{test}'] = round(tmp[tmp.filter(like='Z_').columns].mean(axis=1),3)
-            tmp = tmp[['pID', 'tp', f'Z_{test}']]
-            tmp['measure'] = f'Z_{test}'
-            tmp['test'] = f'Z_{test}'
-            tmp = tmp.rename(columns={f'Z_{test}': 'score'})
-
-            df = pd.concat([df, tmp])
-
-        return df
-
-    @staticmethod
-    def get_corrmats_df(df, out_dir=folders.corrmats):
-
-        predictors = [
-            'severity', 'age', 'LED',
-            '11d_util', '11d_sprit', '11d_bliss', '11d_insight', '11d_dis', '11d_imp', '11d_anx', '11d_cimg', '11d_eimg', '11d_av', '11d_per', '11d_MEAN',
-            'IFN_gamma_delta_A1', 'IFN_gamma_delta_B1', 'IFN_gamma_delta_B30',
-            'IL6_delta_A1', 'IL6_delta_B1', 'IL6_delta_B30',
-            'IL8_delta_A1', 'IL8_delta_B1', 'IL8_delta_B30',
-            'IL10_delta_A1', 'IL10_delta_B1', 'IL10_delta_B30',
-            'TNF_alpha_delta_A1', 'TNF_alpha_delta_B1', 'TNF_alpha_delta_B30',
-            'PRL_delta_A7', 'PRL_delta_B7', 'PRL_delta_B30',]
-
-        outcomes = [
-            'UPDRS_1', 'UPDRS_2', 'UPDRS_3','UPDRS_4',
-            'HAMA', 'MADRS', 'ESAPS', 'CCFQ',
-            'Z_MTS', 'Z_OTS', 'Z_PAL', 'Z_RTI', 'Z_SWM',]
-
-        for method, tp in product(['pearson', 'spearman', 'kendall'], ['A7', 'B7', 'B30']):
-
-            coeffs_df = pd.DataFrame(columns=outcomes, index=predictors)
-            pvalues_df = pd.DataFrame(columns=outcomes, index=predictors)
-
-            for outcome, predictor in product(outcomes, predictors):
-
-                tmp = df.loc[(df.measure==outcome) & (df.tp==tp)][[predictor, 'delta_score']]
-                tmp = tmp.dropna()
-
-                if method == 'pearson':
-                    corcoeff, p = stats.pearsonr(tmp['delta_score'], tmp[predictor])
-                elif method == 'spearman':
-                    corcoeff, p = stats.spearmanr(tmp['delta_score'], tmp[predictor])
-                elif method == 'kendall':
-                    corcoeff, p = stats.kendalltau(tmp['delta_score'], tmp[predictor])
-
-                coeffs_df.at[predictor, outcome] = corcoeff
-                pvalues_df.at[predictor, outcome] = p
-
-            ### Save results
-            coeffs_df.to_csv(os.path.join(folders.corrmats, f'coeffs_{method}_{tp}.csv'))
-            pvalues_df.to_csv(os.path.join(folders.corrmats, f'pvalues_{method}_{tp}.csv'))
-
-            ### Make figures
-            # Use 11d asc
-            plots.Controllers.make_corrmat(
-                coeffs_df, pvalues_df, method, tp,
-                pred_set = [
-                    '11d_util',
-                    '11d_sprit',
-                    '11d_bliss',
-                    '11d_insight',
-                    '11d_dis',
-                    '11d_imp',
-                    '11d_anx',
-                    '11d_cimg',
-                    '11d_eimg',
-                    '11d_av',
-                    '11d_per',
-                    '11d_MEAN'],
-                out_fname='corrmat_11dasc')
-
-            # Use everything else
-            plots.Controllers.make_corrmat(
-                coeffs_df, pvalues_df, method, tp,
-                pred_set = [
-                    'severity', 'age', 'LED',
-                    'IFN_gamma_delta_A1', 'IFN_gamma_delta_B1',
-                    'IL6_delta_A1', 'IL6_delta_B1',
-                    'IL8_delta_A1', 'IL8_delta_B1',
-                    'IL10_delta_A1', 'IL10_delta_B1',
-                    'TNF_alpha_delta_A1', 'TNF_alpha_delta_B1',
-                    'PRL_delta_A7', 'PRL_delta_B7', 'PRL_delta_B30'],
-                out_fname='corrmat')
-
 
 class Analysis():
 
     @staticmethod
-    def fivedasc_pairedt(df, out_dir=folders.vitals, out_fname='pdp1_fivedasc_pairedt.csv'):
+    def observed_scores_df(df, out_dir=folders.exports, out_fname='pdp1_observed.csv', save=False):
+
+        master_df = pd.DataFrame(columns=['measure', 'tp', 'obs'])
+
+        measures = [
+            'UPDRS_1', 'UPDRS_2', 'UPDRS_3', 'UPDRS_4',
+            'HAMA', 'MADRS', 'CCFQ', 'CSSRS', 'ESAPS', 'NPIQ_DIS', 'NPIQ_SEV',
+            'PALTEA', 'PALFAMS', 'SWMS', 'RTIFMDRT', 'RTISMDRT']
+
+        for measure in measures:
+            measure_df = df.loc[(df.measure==measure)]
+
+            for tp in measure_df.tp.unique():
+
+                observed_dict={'measure':[], 'tp':[], 'obs':[]}
+                observed_dict['measure'].append(measure)
+
+                scores = measure_df.loc[(measure_df.tp==tp)].score
+                scores = scores.dropna()
+
+                observed_dict['tp'].append(tp)
+                observed_dict['obs'].append(
+                    f'{round(mean(scores), 1)}±{round(stdev(scores), 1)}')
+
+                master_df = pd.concat([master_df, pd.DataFrame(observed_dict)])
+
+        master_df = master_df.reset_index()
+        if save:
+            master_df.to_csv(os.path.join(out_dir, out_fname), index=False)
+
+        return master_df
+
+    @staticmethod
+    def fivedasc_pairedt(df, out_dir=folders.vitals, out_fname='pdp1_fivedasc_pairedt.csv', save=False):
 
         rows=[]
         for measure in df.measure.unique():
@@ -861,10 +930,14 @@ class Analysis():
             rows.append([measure, round(t,3), round(tp,4), round(w,3), round(wp,4)])
 
         df = pd.DataFrame(columns=['measure', 't', 't.p', 'w', 'w.p'], data=rows)
-        df.to_csv(os.path.join(out_dir, out_fname), index=False)
+
+        if save:
+            df.to_csv(os.path.join(out_dir, out_fname), index=False)
+
+        return df
 
     @staticmethod
-    def vitals_dmax(df, out_dir=folders.vitals, out_fname='pdp1_vitals_dmax.csv'):
+    def vitals_dmax(df, out_dir=folders.vitals, out_fname='pdp1_vitals_dmax.csv', save=False):
 
         rows=[]
         for measure in df.measure.unique():
@@ -891,10 +964,14 @@ class Analysis():
                 round(mean(a0_deltamaxs),2), round(mean(b0_deltamaxs),2)])
 
         df = pd.DataFrame(columns=['measure', 't', 't.p', 'w', 'w.p', 'A0_deltamax_mean', 'B0_deltamax_mean'], data=rows)
-        df.to_csv(os.path.join(out_dir, out_fname), index=False)
+
+        if save:
+            df.to_csv(os.path.join(out_dir, out_fname), index=False)
+
+        return df
 
     @staticmethod
-    def vitals_avg(df, out_dir=folders.vitals, out_fname='pdp1_vitals_avg.csv'):
+    def vitals_avg(df, out_dir=folders.vitals, out_fname='pdp1_vitals_avg.csv', save=False):
 
         rows=[]
         for measure in df.measure.unique():
@@ -915,36 +992,11 @@ class Analysis():
                 round(mean(a0_avgs),2), round(mean(b0_avgs),2)])
 
         df = pd.DataFrame(columns=['measure', 't', 't.p', 'w', 'w.p', 'A0_avg', 'B0_avg'], data=rows)
-        df.to_csv(os.path.join(out_dir, out_fname), index=False)
 
-    @staticmethod
-    def observed_scores_df(df, out_dir=folders.exports, out_fname='pdp1_observed.csv'):
+        if save:
+            df.to_csv(os.path.join(out_dir, out_fname), index=False)
 
-        master_df = pd.DataFrame(columns=['measure', 'tp', 'obs'])
-
-        measures = [
-            'UPDRS_1', 'UPDRS_2', 'UPDRS_3', 'UPDRS_4',
-            'HAMA', 'MADRS', 'CCFQ', 'CSSRS', 'ESAPS', 'NPIQ_DIS', 'NPIQ_SEV']
-
-        for measure in measures:
-            measure_df = df.loc[(df.measure==measure)]
-
-            for tp in measure_df.tp.unique():
-
-                observed_dict={'measure':[], 'tp':[], 'obs':[]}
-                observed_dict['measure'].append(measure)
-
-                scores = measure_df.loc[(measure_df.tp==tp)].score
-                scores = scores.dropna()
-
-                observed_dict['tp'].append(tp)
-                observed_dict['obs'].append(
-                    f'{round(mean(scores), 1)}±{round(stdev(scores), 1)}')
-
-                master_df = pd.concat([master_df, pd.DataFrame(observed_dict)])
-
-        master_df.to_csv(os.path.join(out_dir, out_fname), index=False)
-
+        return df
 
 class Helpers():
 
@@ -1010,7 +1062,8 @@ class Helpers():
             os.path.join(
                 folders.raw,
                 'REDCap export',
-                'PDP1-PDP1clinicalOutcomes_DATA_2023-Jul-17.csv'),
+                #'PDP1-PDP1clinicalOutcomes_DATA_2023-Jul-17.csv'),
+                'PDP1-PDP1clinicalOutcomes_DATA_2024-Jan-18.csv'),
             dtype={
                 'record_id': str,
                 'vs_notes': str,
@@ -1020,7 +1073,8 @@ class Helpers():
                 'vs_extra_measures': str,
                 'ccfq_ra_check_bl': str,
                 'npid_ra_check_bl': str,
-                'npid_ra_check': str,})
+                'npid_ra_check': str,
+                'moca_score': str,})
 
         df = df.loc[(df.record_id.isin(config.valid_str_pIDs))]
         df['record_id'] = df['record_id'].astype(int)
@@ -1031,6 +1085,7 @@ class Helpers():
 
         df = df.replace({
             "screening_baseline_arm_1": "bsl",
+            "phone_screen_arm_1": "bsl", # for some reason for PsychQ this is how bsl was encoded
             "day_a0_dose_1_arm_1": "A0",
             "day_a1_arm_1": "A1",
             "day_a7_arm_1": "A7",
