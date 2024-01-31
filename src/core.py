@@ -307,8 +307,8 @@ class Core():
         sev = bsl_severity + post_bsl_severityerity
 
         # Fill up with zeros missing data at the appropiate timepoints for each column
-        df.loc[(df.tp!='bsl'), post_bsl_severityerity] = df.loc[(df.tp!='bsl'), post_bsl_severityerity].replace(np.nan, 0)
-        df.loc[(df.tp=='bsl'), bsl_severity] =df.loc[(df.tp=='bsl'), bsl_severity].replace(np.nan, 0)
+        df.loc[(df.tp!='phone_screen'), post_bsl_severityerity] = df.loc[(df.tp!='phone_screen'), post_bsl_severityerity].replace(np.nan, 0)
+        df.loc[(df.tp=='phone_screen'), bsl_severity] =df.loc[(df.tp=='phone_screen'), bsl_severity].replace(np.nan, 0)
 
         keep_cols = ['pID', 'tp'] + freq + sev
         df = df[keep_cols]
@@ -326,13 +326,13 @@ class Core():
 
                 if pd.isnull(row[freq_n]):
                     df.at[index, freq_n] = row[bsl_freq_n]
-                    assert df.at[index, 'tp']=='bsl'
+                    assert df.at[index, 'tp']=='phone_screen'
                 elif pd.notnull(row[freq_n]) and pd.notnull(row[bsl_freq_n]):
                     assert df.at[index, freq_n]==row[bsl_freq_n]
 
                 if pd.isnull(row[sev_n]):
                     df.at[index, sev_n] = row[bsl_severity_n]
-                    assert df.at[index, 'tp']=='bsl'
+                    assert df.at[index, 'tp']=='phone_screen'
                 elif pd.notnull(row[sev_n]) and pd.notnull(row[bsl_severity_n]):
                     assert df.at[index, sev_n]==row[bsl_severity_n]
 
@@ -998,6 +998,7 @@ class Analysis():
 
         return df
 
+
 class Helpers():
 
     @staticmethod
@@ -1085,7 +1086,7 @@ class Helpers():
 
         df = df.replace({
             "screening_baseline_arm_1": "bsl",
-            "phone_screen_arm_1": "bsl", # for some reason for PsychQ this is how bsl was encoded
+            "phone_screen_arm_1": "phone_screen",
             "day_a0_dose_1_arm_1": "A0",
             "day_a1_arm_1": "A1",
             "day_a7_arm_1": "A7",

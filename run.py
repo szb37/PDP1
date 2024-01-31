@@ -7,11 +7,11 @@ import os
 
 
 """ process data """
-if False: # create master DF from raw data files
-    df = core.Controllers.get_master_df()
+if True: # create master DF from raw data files
+    df = core.Controllers.get_master_df(save=True)
 
 if False: # create vitals DF from raw data files
-    df_vitals = core.Controllers.get_vitals_df()
+    df_vitals = core.Controllers.get_vitals_df(save=True)
 
 if False: # create master DF with all potential bsl covariates
     df_wcovs = core.Controllers.add_covs_df(
@@ -70,7 +70,7 @@ if False: # make vitals analysis
         df=pd.read_csv(
             os.path.join(folders.data, 'pdp1_5dasc.csv')),)
 
-if True: # make observed scores table
+if False: # make observed scores table
     core.Analysis.observed_scores_df(
         df=pd.read_csv(
             os.path.join(folders.exports, 'pdp1_data_master.csv')),)
