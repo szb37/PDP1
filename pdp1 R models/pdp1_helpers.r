@@ -8,6 +8,7 @@ load_pdp1_data <- function(){
   return(df)
 }
 
+
 calc_hedges.g <- function(group1, group2) {
   
   # Remove NAs

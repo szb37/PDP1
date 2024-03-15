@@ -202,7 +202,7 @@ class Controllers():
             'bliss': 'Blissful\nstate',
             'insight': 'Insightfulness',
             'disem': 'Disembodiment',
-            'impcc': 'Impaired\ncontrol and cog.',
+            'impcc': 'Impaired control\nand cognition',
             'anx': 'Anxiety',
             'cimg': ' Complex\nimagery',
             'eimg': 'Elementary\nimagery',

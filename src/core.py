@@ -141,6 +141,82 @@ class Controllers():
 class Core():
 
     @staticmethod
+    def get_vitals_formatted(df, out_dir=folders.vitals, out_fname='pdp1_vitals_data_formatted.csv', save=False):
+
+        rows=[]
+
+        for measure in df.measure.unique():
+
+            A0_bsls=[]
+            B0_bsls=[]
+            A0_dmaxs=[]
+            B0_dmaxs=[]
+            A0_avg=[]
+            B0_avg=[]
+            A0_max=[]
+            B0_max=[]
+
+            for pID in df.pID.unique():
+
+                # Get BSL
+                A0_bsl = df[
+                    (df['measure']==measure) &
+                    (df['pID']==pID) &
+                    (df['tp']=='A0') &
+                    (df['time']==0)].score.values[0]
+
+                B0_bsl = df[
+                    (df['measure']==measure) &
+                    (df['pID']==pID) &
+                    (df['tp']=='B0') &
+                    (df['time']==0)].score.values[0]
+
+                # Get delta max
+                A0_dmax = Helpers.find_delta_max(df[(df['measure']==measure) & (df['pID']==pID) & (df['tp']=='A0')])
+                B0_dmax = Helpers.find_delta_max(df[(df['measure']==measure) & (df['pID']==pID) & (df['tp']=='B0')])
+                if math.isnan(A0_dmax) or math.isnan(B0_dmax):
+                    print(f'Failed to find max delta; measure:{measure}, pID:{pID}')
+                    continue
+
+                # Get non-bsl AVG
+                A0_avg = df[(df['measure']==measure) & (df['pID']==pID) & (df['tp']=='A0') & (df['time']!=0)].score.mean()
+                B0_avg = df[(df['measure']==measure) & (df['pID']==pID) & (df['tp']=='B0') & (df['time']!=0)].score.mean()
+
+                # Get non-bsl MAX
+                A0_max = df[(df['measure']==measure) & (df['pID']==pID) & (df['tp']=='A0') & (df['time']!=0)].score.max()
+                B0_max = df[(df['measure']==measure) & (df['pID']==pID) & (df['tp']=='B0') & (df['time']!=0)].score.max()
+
+                # Append row
+                rows.append([
+                    pID,
+                    measure,
+                    round(A0_bsl,2),
+                    round(B0_bsl,2),
+                    round(A0_dmax,2),
+                    round(B0_dmax,2),
+                    round(A0_avg,2),
+                    round(B0_avg,2),
+                    round(A0_max,2),
+                    round(B0_max,2),])
+
+        df = pd.DataFrame(columns=[
+            'pID',
+            'measure',
+            'A0_bsl',
+            'B0_bsl',
+            'A0_dmax',
+            'B0_dmax',
+            'A0_avg',
+            'B0_avg',
+            'A0_max',
+            'B0_max',], data=rows)
+
+        if save:
+            df.to_csv(os.path.join(out_dir, out_fname), index=False)
+
+        return df
+
+    @staticmethod
     def get_5dasc_df(out_dir=folders.data, out_fname='pdp1_5dasc.csv'):
         """
         ASC (Dittrich, 1998) can be divided into either 5 (Dittrich, 1998) (94 items), or 11 dimensions (Studerus et al., 2010) (42 items), these are 2 ways to analyze the dataset.
@@ -937,66 +1013,200 @@ class Analysis():
         return df
 
     @staticmethod
-    def vitals_dmax(df, out_dir=folders.vitals, out_fname='pdp1_vitals_dmax.csv', save=False):
+    def vitals_stats(df, out_dir=folders.vitals, out_fname='pdp1_vitals_tests.csv', save=False):
 
-        rows=[]
+        df_stats = pd.DataFrame(columns=['measure', 'comparison','sum_func','t','t.p','w','w.p'])
+
         for measure in df.measure.unique():
-            a0_deltamaxs=[]
-            b0_deltamaxs=[]
 
-            # Extract delta max for each participant
-            for pID in df.pID.unique():
-                a0_delta_max = Helpers.find_delta_max(df[(df['measure']==measure) & (df['pID']==pID) & (df['tp']=='A0')])
-                b0_delta_max = Helpers.find_delta_max(df[(df['measure']==measure) & (df['pID']==pID) & (df['tp']=='B0')])
+            """ Stats based on AVG """
+            # A0 within-session baseline vs AVG
+            t, tp = ttest_rel(
+                df.loc[(df.measure==measure)].A0_bsl,
+                df.loc[(df.measure==measure)].A0_avg,
+                nan_policy='omit')
+            w, wp = wilcoxon(
+                df.loc[(df.measure==measure)].A0_bsl,
+                df.loc[(df.measure==measure)].A0_avg,
+                nan_policy='omit')
+            df_stats.loc[df_stats.shape[0]] = {
+                'measure': measure,
+                'comparison': 'within-session A0',
+                'sum_func': 'avg',
+                't': round(t, 3),
+                't.p': round(tp, 3),
+                'w': round(w, 3),
+                'w.p': round(wp, 3)}
 
-                if math.isnan(a0_delta_max) or math.isnan(b0_delta_max):
-                    print(f'Failed to find max delta; measure:{measure}, pID:{pID}')
-                    continue
+            # B0 within-session baseline vs AVG
+            t, tp = ttest_rel(
+                df.loc[(df.measure==measure)].B0_bsl,
+                df.loc[(df.measure==measure)].B0_avg,
+                nan_policy='omit')
+            w, wp = wilcoxon(
+                df.loc[(df.measure==measure)].B0_bsl,
+                df.loc[(df.measure==measure)].B0_avg,
+                nan_policy='omit')
+            df_stats.loc[df_stats.shape[0]] = {
+                'measure': measure,
+                'comparison': 'within-session B0',
+                'sum_func': 'avg',
+                't': round(t, 3),
+                't.p': round(tp, 3),
+                'w': round(w, 3),
+                'w.p': round(wp, 3)}
 
-                a0_deltamaxs.append(a0_delta_max)
-                b0_deltamaxs.append(b0_delta_max)
+            # Between-sessions AVG
+            t, tp = ttest_rel(
+                df.loc[(df.measure==measure)].A0_avg,
+                df.loc[(df.measure==measure)].B0_avg,
+                nan_policy='omit')
+            w, wp = wilcoxon(
+                df.loc[(df.measure==measure)].A0_avg,
+                df.loc[(df.measure==measure)].B0_avg,
+                nan_policy='omit')
+            df_stats.loc[df_stats.shape[0]] = {
+                'measure': measure,
+                'comparison': 'between-session',
+                'sum_func': 'avg',
+                't': round(t, 3),
+                't.p': round(tp, 3),
+                'w': round(w, 3),
+                'w.p': round(wp, 3)}
 
-            # Do paired t-test of delta maxes
-            t, tp = ttest_rel(a0_deltamaxs, b0_deltamaxs, nan_policy='omit')
-            w, wp = wilcoxon(a0_deltamaxs, b0_deltamaxs, nan_policy='omit')
-            rows.append([
-                measure, round(t,3), round(tp,4), round(w,3), round(wp,4),
-                round(mean(a0_deltamaxs),2), round(mean(b0_deltamaxs),2)])
+            """ Stats based on DMAX """
+            # A0 within-session baseline vs DMAX
+            t, tp = ttest_rel(
+                df.loc[(df.measure==measure)].A0_bsl,
+                df.loc[(df.measure==measure)].A0_dmax,
+                nan_policy='omit')
+            w, wp = wilcoxon(
+                df.loc[(df.measure==measure)].A0_bsl,
+                df.loc[(df.measure==measure)].A0_dmax,
+                nan_policy='omit')
+            df_stats.loc[df_stats.shape[0]] = {
+                'measure': measure,
+                'comparison': 'within-session A0',
+                'sum_func': 'dmax',
+                't': round(t, 3),
+                't.p': round(tp, 3),
+                'w': round(w, 3),
+                'w.p': round(wp, 3)}
 
-        df = pd.DataFrame(columns=['measure', 't', 't.p', 'w', 'w.p', 'A0_deltamax_mean', 'B0_deltamax_mean'], data=rows)
+            # B0 within-session baseline vs DMAX
+            t, tp = ttest_rel(
+                df.loc[(df.measure==measure)].B0_bsl,
+                df.loc[(df.measure==measure)].B0_dmax,
+                nan_policy='omit')
+            w, wp = wilcoxon(
+                df.loc[(df.measure==measure)].B0_bsl,
+                df.loc[(df.measure==measure)].B0_dmax,
+                nan_policy='omit')
+            df_stats.loc[df_stats.shape[0]] = {
+                'measure': measure,
+                'comparison': 'within-session B0',
+                'sum_func': 'dmax',
+                't': round(t, 3),
+                't.p': round(tp, 3),
+                'w': round(w, 3),
+                'w.p': round(wp, 3)}
+
+            # Between-sessions DMAX
+            t, tp = ttest_rel(
+                df.loc[(df.measure==measure)].A0_dmax,
+                df.loc[(df.measure==measure)].B0_dmax,
+                nan_policy='omit')
+            w, wp = wilcoxon(
+                df.loc[(df.measure==measure)].A0_dmax,
+                df.loc[(df.measure==measure)].B0_dmax,
+                nan_policy='omit')
+            df_stats.loc[df_stats.shape[0]] = {
+                'measure': measure,
+                'comparison': 'between-session',
+                'sum_func': 'dmax',
+                't': round(t, 3),
+                't.p': round(tp, 3),
+                'w': round(w, 3),
+                'w.p': round(wp, 3)}
+
+            """ Stats based on MAX """
+            # A0 within-session baseline vs MAX
+            t, tp = ttest_rel(
+                df.loc[(df.measure==measure)].A0_bsl,
+                df.loc[(df.measure==measure)].A0_max,
+                nan_policy='omit')
+            w, wp = wilcoxon(
+                df.loc[(df.measure==measure)].A0_bsl,
+                df.loc[(df.measure==measure)].A0_max,
+                nan_policy='omit')
+            df_stats.loc[df_stats.shape[0]] = {
+                'measure': measure,
+                'comparison': 'within-session A0',
+                'sum_func': 'max',
+                't': round(t, 3),
+                't.p': round(tp, 3),
+                'w': round(w, 3),
+                'w.p': round(wp, 3)}
+
+            # B0 within-session baseline vs MAX
+            t, tp = ttest_rel(
+                df.loc[(df.measure==measure)].B0_bsl,
+                df.loc[(df.measure==measure)].B0_max,
+                nan_policy='omit')
+            w, wp = wilcoxon(
+                df.loc[(df.measure==measure)].B0_bsl,
+                df.loc[(df.measure==measure)].B0_max,
+                nan_policy='omit')
+            df_stats.loc[df_stats.shape[0]] = {
+                'measure': measure,
+                'comparison': 'within-session B0',
+                'sum_func': 'max',
+                't': round(t, 3),
+                't.p': round(tp, 3),
+                'w': round(w, 3),
+                'w.p': round(wp, 3)}
+
+            # Between-sessions MAX
+            t, tp = ttest_rel(
+                df.loc[(df.measure==measure)].A0_max,
+                df.loc[(df.measure==measure)].B0_max,
+                nan_policy='omit')
+            w, wp = wilcoxon(
+                df.loc[(df.measure==measure)].A0_max,
+                df.loc[(df.measure==measure)].B0_max,
+                nan_policy='omit')
+            df_stats.loc[df_stats.shape[0]] = {
+                'measure': measure,
+                'comparison': 'between-session',
+                'sum_func': 'max',
+                't': round(t, 3),
+                't.p': round(tp, 3),
+                'w': round(w, 3),
+                'w.p': round(wp, 3)}
 
         if save:
-            df.to_csv(os.path.join(out_dir, out_fname), index=False)
+            df_stats.to_csv(os.path.join(out_dir, out_fname), index=False)
 
-        return df
+        return df_stats
 
     @staticmethod
-    def vitals_avg(df, out_dir=folders.vitals, out_fname='pdp1_vitals_avg.csv', save=False):
+    def vitals_descriptive(df, out_dir=folders.vitals, out_fname='pdp1_vitals_descriptive.csv', save=False):
 
-        rows=[]
+        df_desc = pd.DataFrame(columns=['measure', 'type', 'mean', 'sd'])
+
         for measure in df.measure.unique():
-            a0_avgs=[]
-            b0_avgs=[]
+            for type in ['A0_bsl', 'B0_bsl', 'A0_dmax', 'B0_dmax', 'A0_avg', 'B0_avg', 'A0_max', 'B0_max']:
 
-            for pID in df.pID.unique():
-
-                a0_avgs.append(
-                    df[(df['measure']==measure) & (df['pID']==pID) & (df['tp']=='A0')].score.mean())
-                b0_avgs.append(
-                    df[(df['measure']==measure) & (df['pID']==pID) & (df['tp']=='B0')].score.mean())
-
-            t, tp = ttest_rel(a0_avgs, b0_avgs, nan_policy='omit')
-            w, wp = wilcoxon(a0_avgs, b0_avgs, nan_policy='omit')
-            rows.append([
-                measure, round(t,3), round(tp,4), round(w,3), round(wp,4),
-                round(mean(a0_avgs),2), round(mean(b0_avgs),2)])
-
-        df = pd.DataFrame(columns=['measure', 't', 't.p', 'w', 'w.p', 'A0_avg', 'B0_avg'], data=rows)
+                df_desc.loc[df_desc.shape[0]] = {
+                    'measure': measure,
+                    'type': type,
+                    'mean': round(df.loc[(df.measure==measure)][type].mean(),2),
+                    'sd': round(df.loc[(df.measure==measure)][type].std(),2)}
 
         if save:
-            df.to_csv(os.path.join(out_dir, out_fname), index=False)
+            df_desc.to_csv(os.path.join(out_dir, out_fname), index=False)
 
-        return df
+        return df_desc
 
 
 class Helpers():
@@ -1054,7 +1264,8 @@ class Helpers():
                 idx_max = idx
                 delta_max = delta
 
-        return round((df.iloc[idx_max, score_col_idx]-t0_value),3)
+        #return round((df.iloc[idx_max, score_col_idx]-t0_value),3)
+        return round((df.iloc[idx_max, score_col_idx]),3)
 
     @staticmethod
     def get_REDCap_export():

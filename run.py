@@ -7,11 +7,14 @@ import os
 
 
 """ process data """
-if True: # create master DF from raw data files
+if False: # create master DF from raw data files
     df = core.Controllers.get_master_df(save=True)
 
 if False: # create vitals DF from raw data files
     df_vitals = core.Controllers.get_vitals_df(save=True)
+    df_vitals_formatted = core.Core.get_vitals_formatted(
+        df=pd.read_csv(os.path.join(folders.data, 'pdp1_vitals.csv')),
+        save=True)
 
 if False: # create master DF with all potential bsl covariates
     df_wcovs = core.Controllers.add_covs_df(
@@ -48,7 +51,8 @@ if False: # make agg time evolution plots
 if False: # make 5DASC comparison plots
     plots.Controllers.make_5dasc(
         df=pd.read_csv(os.path.join(folders.data, 'pdp1_5dasc.csv')),
-        out_dir=folders.fivedasc,)
+        out_dir=folders.fivedasc,
+        save=True)
 
 if False: # make TSQ plot
     plots.Controllers.make_tsq(
@@ -58,13 +62,18 @@ if False: # make TSQ plot
 
 """ analysis """
 if False: # make vitals analysis
-    core.Analysis.vitals_dmax(
-        df=pd.read_csv(
-            os.path.join(folders.data, 'pdp1_vitals.csv')),)
 
-    core.Analysis.vitals_avg(
+    core.Analysis.vitals_stats(
         df=pd.read_csv(
-            os.path.join(folders.data, 'pdp1_vitals.csv')),)
+            os.path.join(folders.vitals, 'pdp1_vitals_data_formatted.csv')),
+            save=True)
+
+    core.Analysis.vitals_descriptive(
+        df=pd.read_csv(
+            os.path.join(folders.vitals, 'pdp1_vitals_data_formatted.csv')),
+            save=True)
+
+if False: # make 5DASC tests
 
     core.Analysis.fivedasc_pairedt(
         df=pd.read_csv(
