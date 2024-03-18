@@ -957,14 +957,14 @@ class Core():
 class Analysis():
 
     @staticmethod
-    def observed_scores_df(df, out_dir=folders.exports, out_fname='pdp1_observed.csv', save=False):
+    def observed_scores_df(df, out_dir=folders.exports, out_fname='pdp1_observed.csv', save=True):
 
         master_df = pd.DataFrame(columns=['measure', 'tp', 'obs'])
 
         measures = [
             'UPDRS_1', 'UPDRS_2', 'UPDRS_3', 'UPDRS_4',
             'HAMA', 'MADRS', 'CCFQ', 'CSSRS', 'ESAPS', 'NPIQ_DIS', 'NPIQ_SEV',
-            'PALTEA', 'PALFAMS', 'SWMS', 'RTIFMDRT', 'RTISMDRT']
+            'PALTEA', 'PALFAMS', 'SWMS', 'RTIFMDRT', 'RTISMDRT', 'PsychQ']
 
         for measure in measures:
             measure_df = df.loc[(df.measure==measure)]

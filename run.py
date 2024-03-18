@@ -79,7 +79,7 @@ if False: # make 5DASC tests
         df=pd.read_csv(
             os.path.join(folders.data, 'pdp1_5dasc.csv')),)
 
-if False: # make observed scores table
+if True: # make observed scores table
     core.Analysis.observed_scores_df(
         df=pd.read_csv(
             os.path.join(folders.exports, 'pdp1_data_master.csv')),)
